@@ -1,0 +1,1345 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AIエディタ（CH風）モック</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#141824;
+      --panel2:#10131b;
+      --border:#2a3142;
+      --text:#e8ecf3;
+      --muted:#9aa5b5;
+      --accent:#4cc9f0;
+      --good:#49d17a;
+      --bad:#ff5c77;
+      --warn:#ffcc66;
+      --cell:#151a26;
+      --cell2:#111625;
+      --chip:#1b2234;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 700px at 20% 0%, rgba(76,201,240,.08), transparent 50%),
+                  radial-gradient(900px 600px at 90% 10%, rgba(73,209,122,.06), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family:var(--sans);
+    }
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 16px;
+      border-bottom:1px solid var(--border);
+      background:rgba(10,12,18,.6);
+      backdrop-filter: blur(8px);
+      position:sticky;
+      top:0;
+      z-index:10;
+    }
+    header .title{
+      display:flex;
+      gap:10px;
+      align-items:baseline;
+      flex-wrap:wrap;
+    }
+    header h1{
+      font-size:16px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    header .sub{
+      font-size:12px;
+      color:var(--muted);
+    }
+    header .actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    button, .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:12px;
+      transition:transform .06s ease, border-color .12s ease, background .12s ease;
+      user-select:none;
+    }
+    button:hover{border-color:#3a455f}
+    button:active{transform:translateY(1px)}
+    button.primary{
+      border-color: rgba(76,201,240,.35);
+      box-shadow: 0 0 0 1px rgba(76,201,240,.12) inset;
+    }
+    button.danger{
+      border-color: rgba(255,92,119,.35);
+      box-shadow: 0 0 0 1px rgba(255,92,119,.12) inset;
+    }
+    button.small{padding:6px 8px; border-radius:8px}
+    input, select, textarea{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:12px;
+      outline:none;
+      width:100%;
+    }
+    textarea{min-height:90px; font-family:var(--mono); font-size:11px;}
+    .layout{
+      display:grid;
+      grid-template-columns: 280px 1fr 340px;
+      gap:12px;
+      padding:12px;
+      height: calc(100% - 58px);
+    }
+    .panel{
+      background:rgba(20,24,36,.72);
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height: 0;
+    }
+    .panel .hd{
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .panel .hd h2{
+      margin:0;
+      font-size:13px;
+      letter-spacing:.2px;
+    }
+    .panel .hd .meta{
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+    .panel .bd{
+      padding:12px;
+      overflow:auto;
+      min-height:0;
+    }
+
+    /* Palette */
+    .palette-search{
+      display:flex;
+      gap:8px;
+      margin-bottom:10px;
+    }
+    .chip-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .chip-item{
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(16,19,27,.7);
+      cursor:pointer;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      transition: border-color .12s ease, transform .06s ease;
+      user-select:none;
+    }
+    .chip-item:hover{border-color:#3a455f}
+    .chip-item:active{transform:translateY(1px)}
+    .chip-item.selected{
+      border-color: rgba(76,201,240,.55);
+      box-shadow: 0 0 0 2px rgba(76,201,240,.14) inset;
+    }
+    .chip-badge{
+      flex:0 0 auto;
+      font-family:var(--mono);
+      font-size:11px;
+      padding:3px 7px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
+    }
+    .chip-text{min-width:0}
+    .chip-name{
+      font-size:12px;
+      margin:0;
+      line-height:1.2;
+    }
+    .chip-desc{
+      margin:4px 0 0;
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+
+    /* Grid */
+    .grid-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      height:100%;
+      min-height:0;
+    }
+    .grid-topbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      font-size:12px;
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
+      font-family:var(--mono);
+    }
+    .grid{
+      flex:1 1 auto;
+      min-height:0;
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap:6px;
+      padding:12px;
+      background:rgba(10,12,18,.35);
+      border:1px solid var(--border);
+      border-radius:16px;
+      position:relative;
+      overflow:auto;
+    }
+    .cell{
+      position:relative;
+      height:56px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(42,49,66,.9);
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding:8px;
+      cursor:pointer;
+      user-select:none;
+      outline:none;
+    }
+    .cell:hover{border-color:#3a455f}
+    .cell.selected{
+      border-color: rgba(76,201,240,.65);
+      box-shadow: 0 0 0 2px rgba(76,201,240,.15) inset;
+    }
+    .cell.start{
+      border-color: rgba(73,209,122,.55);
+      box-shadow: 0 0 0 2px rgba(73,209,122,.12) inset;
+    }
+    .cell.pc{
+      box-shadow: 0 0 0 2px rgba(255,204,102,.22) inset, 0 0 0 1px rgba(255,204,102,.18);
+      border-color: rgba(255,204,102,.55);
+    }
+    .cell .top{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      justify-content:space-between;
+      min-width:0;
+    }
+    .cell .chip-label{
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 100%;
+    }
+    .cell .mini{
+      display:flex;
+      gap:4px;
+      align-items:center;
+      font-size:10px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+    .cell .body{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:6px;
+    }
+    .cell .chip-name{
+      font-size:12px;
+      margin:0;
+      line-height:1.15;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 100%;
+    }
+    .cell .arrows{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      align-items:flex-end;
+      font-family:var(--mono);
+      font-size:11px;
+      line-height:1.1;
+      white-space:nowrap;
+    }
+    .arr{opacity:.9}
+    .arr.good{color:var(--good)}
+    .arr.bad{color:var(--bad)}
+    .arr.muted{color:var(--muted)}
+    .tiny{
+      font-size:11px;
+      color:var(--muted);
+      margin:0;
+    }
+
+    /* Inspector */
+    .kv{
+      display:grid;
+      grid-template-columns: 100px 1fr;
+      gap:10px;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .kv label{
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+    .section{
+      border-top:1px dashed rgba(42,49,66,.9);
+      margin-top:12px;
+      padding-top:12px;
+    }
+    .section h3{
+      margin:0 0 8px;
+      font-size:12px;
+      color:var(--text);
+    }
+    .arrow-pad{
+      display:grid;
+      grid-template-columns: repeat(3, 44px);
+      grid-template-rows: repeat(3, 44px);
+      gap:8px;
+      justify-content:flex-start;
+      margin-top:6px;
+    }
+    .arrow-pad button{
+      width:44px; height:44px;
+      padding:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+      border-radius:14px;
+    }
+    .arrow-pad .spacer{
+      background:transparent;
+      border-color:transparent;
+      cursor:default;
+      box-shadow:none;
+    }
+    .tag{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+    }
+    .tag .dot{
+      width:8px; height:8px; border-radius:999px;
+      display:inline-block;
+      background:var(--muted);
+    }
+    .tag.good .dot{background:var(--good)}
+    .tag.bad .dot{background:var(--bad)}
+    .tag.warn .dot{background:var(--warn)}
+    .help{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+    .log{
+      font-family:var(--mono);
+      font-size:11px;
+      line-height:1.45;
+      color:#cfd6e6;
+      white-space:pre-wrap;
+    }
+    .log .muted{color:var(--muted)}
+    .log .good{color:var(--good)}
+    .log .bad{color:var(--bad)}
+    .log .warn{color:var(--warn)}
+    .footer-controls{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px;
+    }
+    .row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .row > * {flex: 0 0 auto}
+    .split{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:10px;
+      padding:2px 6px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+    }
+
+    @media (max-width: 1100px){
+      .layout{grid-template-columns: 260px 1fr; grid-template-rows: auto auto;}
+      .panel.right{grid-column: 1 / -1; height: 420px;}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="title">
+    <h1>AIエディタ（CH風）モック</h1>
+    <div class="sub">グリッド＋チップ＋矢印／NOPで道／PCハイライト／簡易Tick実行</div>
+  </div>
+  <div class="actions">
+    <button class="small" id="btnExport">Export</button>
+    <button class="small" id="btnImport">Import</button>
+    <button class="small danger" id="btnClear">Clear</button>
+    <span class="pill" id="pillSel">選択: —</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Left: Palette -->
+  <section class="panel">
+    <div class="hd">
+      <h2>チップパレット</h2>
+      <div class="meta"><span class="kbd">DblClick</span>配置 / <span class="kbd">Click</span>選択 / <span class="kbd">R-Click</span>削除</div>
+    </div>
+    <div class="bd">
+      <div class="palette-search">
+        <input id="search" placeholder="検索（例: Move, Hazard, NOP）" />
+      </div>
+      <div class="chip-list" id="chipList"></div>
+      <div class="section">
+        <div class="help">
+          <b>使い方（モック）</b><br/>
+          1) 左のチップを選ぶ → 2) グリッドを<b>ダブルクリック</b>で配置。右クリックで削除。<br/>
+          3) セルを選択すると右パネルで矢印やパラメータを編集できます。<br/>
+          4) 上部の <span class="kbd">Export</span> でJSON、<span class="kbd">Import</span> で貼り付け復元。<br/>
+          5) 右下の <span class="kbd">Run Tick</span> でPCが進む様子を確認できます（簡易）。<br/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Center: Grid -->
+  <section class="grid-wrap">
+    <div class="grid-topbar">
+      <span class="pill">Grid: <span id="gridSizeLabel">12×12</span></span>
+      <span class="pill">START: <span id="startLabel">A1</span></span>
+      <span class="pill">PC: <span id="pcLabel">A1</span></span>
+      <span class="pill">Tick: <span id="tickLabel">0.1s</span></span>
+      <span class="pill">MAX_STEPS: <span id="stepsLabel">32</span></span>
+      <span class="pill">Step: <span id="stepCounter">0</span></span>
+    </div>
+    <div class="grid" id="grid" aria-label="AI grid"></div>
+  </section>
+
+  <!-- Right: Inspector -->
+  <section class="panel right">
+    <div class="hd">
+      <h2>インスペクタ</h2>
+      <div class="meta" id="insMeta">—</div>
+    </div>
+    <div class="bd">
+      <div id="insEmpty" class="help">
+        セルを選択してください。<br/>
+        <span class="muted">（セル未配置＝壁扱いの挙動は実行ログで確認できます）</span>
+      </div>
+
+      <div id="insBody" style="display:none">
+        <div class="kv">
+          <label>座標</label>
+          <div><span class="tag"><span class="dot"></span><span id="insCoord">—</span></span></div>
+
+          <label>チップ</label>
+          <div>
+            <select id="insChipType"></select>
+          </div>
+
+          <label>名前</label>
+          <div><input id="insName" placeholder="表示名（任意）" /></div>
+
+          <label>パラメータ</label>
+          <div id="insParams"></div>
+        </div>
+
+        <div class="section">
+          <h3>矢印</h3>
+          <div id="arrowMode" class="row" style="margin-bottom:8px"></div>
+          <div class="split">
+            <div>
+              <div class="tag good" style="margin-bottom:6px"><span class="dot"></span>True</div>
+              <div class="arrow-pad" id="padTrue"></div>
+            </div>
+            <div>
+              <div class="tag bad" style="margin-bottom:6px"><span class="dot"></span>False</div>
+              <div class="arrow-pad" id="padFalse"></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="tag warn" style="margin-bottom:6px"><span class="dot"></span>Next</div>
+            <div class="arrow-pad" id="padNext"></div>
+          </div>
+
+          <div class="help" style="margin-top:10px">
+            条件チップは <b>True/False矢印</b> を使い、その他は <b>Next矢印</b> を使います。<br/>
+            未設定の矢印は <span class="kbd">—</span> 扱い（壁に当たるとSTARTへ戻る）として動かします。
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Tick実行（簡易）</h3>
+          <div class="kv">
+            <label>MAX_STEPS</label>
+            <div><input type="number" id="insMaxSteps" min="1" max="512" step="1" /></div>
+            <label>Tick(s)</label>
+            <div><input type="number" id="insTickSec" min="0.01" max="1" step="0.01" /></div>
+          </div>
+
+          <div class="row" style="margin-bottom:10px">
+            <button class="primary" id="btnRunTick">Run Tick</button>
+            <button id="btnRun10">Run 10</button>
+            <button id="btnResetPC">Reset PC</button>
+          </div>
+
+          <div class="section">
+            <h3>テスト用スナップショット（ダミー）</h3>
+            <div class="help">
+              条件チップ（EnemyExists / HazardOnSelf / HazardInRange / TreasureExists / ExitExists）は、ここで指定した値を参照して分岐します。<br/>
+              <span class="muted">※実ゲームのスナップショットとは別物の“モック用”です。</span>
+            </div>
+            <div class="kv" style="margin-top:10px">
+              <label>Enemy</label>
+              <div><input type="checkbox" id="snapEnemy" /> <span class="muted">存在する</span></div>
+              <label>Treasure</label>
+              <div><input type="checkbox" id="snapTreasure" /> <span class="muted">存在する</span></div>
+              <label>Exit</label>
+              <div><input type="checkbox" id="snapExit" /> <span class="muted">存在する</span></div>
+              <label>Hazard(Self)</label>
+              <div><input type="checkbox" id="snapHazardSelf" /> <span class="muted">足元危険</span></div>
+              <label>Hazard(Near)</label>
+              <div><input type="checkbox" id="snapHazardNear" /> <span class="muted">近くに危険</span></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>実行ログ</h3>
+            <div class="help log" id="log"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal -->
+<div id="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9999; align-items:center; justify-content:center; padding:18px">
+  <div style="width:min(820px, 96vw); background:rgba(20,24,36,.96); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow); overflow:hidden;">
+    <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-size:13px; font-weight:600">Import / Export</div>
+      <button class="small" id="modalClose">Close</button>
+    </div>
+    <div style="padding:12px 14px;">
+      <textarea id="modalText" spellcheck="false" placeholder="ここにJSONを貼り付け / ここからコピー"></textarea>
+      <div class="footer-controls">
+        <button class="primary" id="modalApply">Apply Import</button>
+        <button id="modalCopy">Copy</button>
+        <span class="muted" style="font-size:11px">※Exportは現在のグリッド状態・PC・設定を含みます</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const GRID_W = 12, GRID_H = 12;
+  const START = {x:0, y:0}; // A1
+  const DIRS = [
+    {key:'U', label:'↑', dx:0, dy:-1},
+    {key:'R', label:'→', dx:1, dy:0},
+    {key:'D', label:'↓', dx:0, dy:1},
+    {key:'L', label:'←', dx:-1, dy:0},
+  ];
+  const dirLabel = (d)=> (DIRS.find(x=>x.key===d)||{}).label || '—';
+
+  const CHIP_DEFS = [
+    {id:'NOP', kind:'NOP', name:'NOP', badge:'NOP', desc:'何もしない（時間消費なし）。道を作る。'},
+    // Conditions (mock)
+    {id:'COND_EnemyExists', kind:'COND', name:'EnemyExists', badge:'COND', desc:'敵が存在する？（Rなどは後で拡張）'},
+    {id:'COND_TreasureExists', kind:'COND', name:'TreasureExists', badge:'COND', desc:'宝箱が存在する？'},
+    {id:'COND_ExitExists', kind:'COND', name:'ExitExists', badge:'COND', desc:'出口が存在する？'},
+    {id:'COND_HazardOnSelf', kind:'COND', name:'HazardOnSelf', badge:'COND', desc:'足元が危険？（罠/赤床/持続床を統合）'},
+    {id:'COND_HazardInRange', kind:'COND', name:'HazardInRange', badge:'COND', desc:'近くに危険？（Rで感度調整）'},
+    // Actions
+    {id:'ACT_MoveToEnemy', kind:'ACT', name:'MoveToEnemy', badge:'ACT', desc:'敵へ向かう（Yield）'},
+    {id:'ACT_MoveToTreasure', kind:'ACT', name:'MoveToTreasure', badge:'ACT', desc:'宝箱へ向かう（Yield）'},
+    {id:'ACT_MoveToExit', kind:'ACT', name:'MoveToExit', badge:'ACT', desc:'出口へ向かう（Yield）'},
+    {id:'ACT_EvadeHazard', kind:'ACT', name:'EvadeHazard', badge:'ACT', desc:'危険を避ける1手（Yield）'},
+    {id:'ACT_Attack', kind:'ACT', name:'Attack', badge:'ACT', desc:'攻撃（Running → 完了でSuccess）'},
+    {id:'ACT_Dodge', kind:'ACT', name:'Dodge', badge:'ACT', desc:'回避（Running → 完了でSuccess）'},
+    {id:'ACT_Heal', kind:'ACT', name:'Heal', badge:'ACT', desc:'回復（Running → 完了でSuccess）'},
+    {id:'ACT_Wait', kind:'ACT', name:'Wait', badge:'ACT', desc:'待機（Yield）'},
+  ];
+
+  // App state
+  const state = {
+    grid: Array.from({length: GRID_H}, ()=> Array.from({length: GRID_W}, ()=> null)),
+    selectedCell: {x:0,y:0},
+    selectedPaletteId: 'NOP',
+    pc: {...START},
+    tickSec: 0.1,
+    maxSteps: 32,
+    stepCounter: 0,
+    // mock snapshot flags
+    snapshot: {
+      enemy: false, treasure: false, exit: false, hazardSelf: false, hazardNear: false
+    },
+    logLines: []
+  };
+
+  // DOM
+  const gridEl = document.getElementById('grid');
+  const chipListEl = document.getElementById('chipList');
+  const searchEl = document.getElementById('search');
+  const pillSelEl = document.getElementById('pillSel');
+  const pcLabelEl = document.getElementById('pcLabel');
+  const stepsLabelEl = document.getElementById('stepsLabel');
+  const stepCounterEl = document.getElementById('stepCounter');
+  const insMetaEl = document.getElementById('insMeta');
+  const insEmptyEl = document.getElementById('insEmpty');
+  const insBodyEl = document.getElementById('insBody');
+  const insCoordEl = document.getElementById('insCoord');
+  const insChipTypeEl = document.getElementById('insChipType');
+  const insNameEl = document.getElementById('insName');
+  const insParamsEl = document.getElementById('insParams');
+  const arrowModeEl = document.getElementById('arrowMode');
+  const padTrueEl = document.getElementById('padTrue');
+  const padFalseEl = document.getElementById('padFalse');
+  const padNextEl = document.getElementById('padNext');
+  const logEl = document.getElementById('log');
+  const insMaxStepsEl = document.getElementById('insMaxSteps');
+  const insTickSecEl = document.getElementById('insTickSec');
+
+  // snapshot checkboxes
+  const snapEnemyEl = document.getElementById('snapEnemy');
+  const snapTreasureEl = document.getElementById('snapTreasure');
+  const snapExitEl = document.getElementById('snapExit');
+  const snapHazardSelfEl = document.getElementById('snapHazardSelf');
+  const snapHazardNearEl = document.getElementById('snapHazardNear');
+
+  // Modal
+  const modalEl = document.getElementById('modal');
+  const modalTextEl = document.getElementById('modalText');
+
+  // Helpers
+  function coordToLabel(x,y){
+    const col = String.fromCharCode('A'.charCodeAt(0)+x);
+    return `${col}${y+1}`;
+  }
+  function inBounds(x,y){ return x>=0 && x<GRID_W && y>=0 && y<GRID_H; }
+  function nextPos(pos, dirKey){
+    const d = DIRS.find(d=>d.key===dirKey);
+    if(!d) return null;
+    const nx = pos.x + d.dx, ny = pos.y + d.dy;
+    if(!inBounds(nx,ny)) return null;
+    return {x:nx, y:ny};
+  }
+  function chipDefById(id){ return CHIP_DEFS.find(c=>c.id===id); }
+  function findDefForCell(cell){
+    // cell.typeId corresponds to CHIP_DEFS.id
+    return CHIP_DEFS.find(c=>c.id===cell.typeId) || null;
+  }
+  function makeCell(typeId){
+    const def = chipDefById(typeId);
+    const base = {
+      typeId,
+      displayName: '',
+      // arrows:
+      next: null,
+      t: null,
+      f: null,
+      // params:
+      params: {},
+      // runtime state for mock Running:
+      rt: {remaining:0}
+    };
+    // defaults
+    if(def && def.kind==='NOP'){
+      base.next = 'R';
+    } else if(def && def.kind==='COND'){
+      base.t = 'R';
+      base.f = 'D';
+      if(def.name==='HazardInRange'){
+        base.params.R = 1.5;
+      }
+    } else if(def && def.kind==='ACT'){
+      base.next = 'R';
+      if(def.name==='Wait'){
+        base.params.note = '0.1s';
+      }
+    }
+    return base;
+  }
+
+  function log(msg, cls){
+    const line = {msg, cls: cls||'muted'};
+    state.logLines.unshift(line);
+    if(state.logLines.length>120) state.logLines.pop();
+    renderLog();
+  }
+
+  function renderLog(){
+    const lines = state.logLines.map(l=>{
+      const cls = l.cls || 'muted';
+      return `<span class="${cls}">${escapeHtml(l.msg)}</span>`;
+    }).join("\n");
+    logEl.innerHTML = lines || '<span class="muted">（まだログはありません）</span>';
+  }
+
+  function escapeHtml(s){
+    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  }
+
+  // Palette render
+  function renderPalette(){
+    const q = (searchEl.value||'').toLowerCase();
+    chipListEl.innerHTML = '';
+    CHIP_DEFS.filter(def=>{
+      const hay = (def.name+' '+def.badge+' '+def.desc).toLowerCase();
+      return hay.includes(q);
+    }).forEach(def=>{
+      const el = document.createElement('div');
+      el.className = 'chip-item' + (state.selectedPaletteId===def.id ? ' selected' : '');
+      el.innerHTML = `
+        <div class="chip-badge">${def.badge}</div>
+        <div class="chip-text">
+          <p class="chip-name">${def.name}</p>
+          <p class="chip-desc">${def.desc}</p>
+        </div>
+      `;
+      el.addEventListener('click', ()=>{
+        state.selectedPaletteId = def.id;
+        pillSelEl.textContent = `選択: ${def.name}`;
+        renderPalette();
+      });
+      chipListEl.appendChild(el);
+    });
+  }
+
+  // Grid render
+  function renderGrid(){
+    gridEl.innerHTML = '';
+    for(let y=0; y<GRID_H; y++){
+      for(let x=0; x<GRID_W; x++){
+        const cellData = state.grid[y][x];
+        const el = document.createElement('div');
+        el.className = 'cell';
+        el.tabIndex = 0;
+
+        const isStart = (x===START.x && y===START.y);
+        const isSel = (x===state.selectedCell.x && y===state.selectedCell.y);
+        const isPc = (x===state.pc.x && y===state.pc.y);
+
+        if(isStart) el.classList.add('start');
+        if(isSel) el.classList.add('selected');
+        if(isPc) el.classList.add('pc');
+
+        const label = coordToLabel(x,y);
+        let chipName = '—';
+        let chipLabel = 'EMPTY (wall)';
+        let arrowsHtml = `<span class="arr muted">—</span>`;
+        if(cellData){
+          const def = findDefForCell(cellData);
+          chipName = (cellData.displayName || (def?def.name:'?'));
+          chipLabel = def ? `${def.badge}:${def.name}` : 'Chip';
+          arrowsHtml = renderArrowsForCell(cellData);
+        }
+        el.innerHTML = `
+          <div class="top">
+            <div class="chip-label">${label} ${isStart ? '· START' : ''}</div>
+            <div class="mini">${cellData ? '' : '벽'}</div>
+          </div>
+          <div class="body">
+            <p class="chip-name" title="${escapeHtml(chipLabel)}">${escapeHtml(chipName)}</p>
+            <div class="arrows">${arrowsHtml}</div>
+          </div>
+        `;
+
+        el.addEventListener('click', ()=>{
+          state.selectedCell = {x,y};
+          openInspectorForSelected();
+          renderGrid();
+        });
+
+        el.addEventListener('contextmenu', (ev)=>{
+          ev.preventDefault();
+          // right click: clear cell (except start allowed)
+          state.grid[y][x] = null;
+          if(state.selectedCell.x===x && state.selectedCell.y===y){
+            openInspectorForSelected();
+          }
+          renderGrid();
+          log(`${coordToLabel(x,y)} cleared`, 'warn');
+        });
+
+        el.addEventListener('dblclick', ()=>{
+          // double click to place currently selected palette chip
+          placeSelectedPaletteAt(x,y);
+        });
+
+        el.addEventListener('keydown', (ev)=>{
+          if(ev.key==='Enter'){
+            placeSelectedPaletteAt(x,y);
+          }
+          if(ev.key==='Delete' || ev.key==='Backspace'){
+            state.grid[y][x]=null;
+            renderGrid();
+            log(`${coordToLabel(x,y)} cleared`, 'warn');
+          }
+        });
+
+        gridEl.appendChild(el);
+      }
+    }
+    pcLabelEl.textContent = coordToLabel(state.pc.x, state.pc.y);
+    stepsLabelEl.textContent = String(state.maxSteps);
+    stepCounterEl.textContent = String(state.stepCounter);
+  }
+
+  function renderArrowsForCell(cell){
+    const def = findDefForCell(cell);
+    if(!def) return `<span class="arr muted">—</span>`;
+    if(def.kind==='COND'){
+      const t = cell.t ? `${dirLabel(cell.t)}` : '—';
+      const f = cell.f ? `${dirLabel(cell.f)}` : '—';
+      return `
+        <span class="arr good">T${t}</span>
+        <span class="arr bad">F${f}</span>
+      `;
+    } else {
+      const n = cell.next ? `${dirLabel(cell.next)}` : '—';
+      return `<span class="arr warn">N${n}</span>`;
+    }
+  }
+
+  function placeSelectedPaletteAt(x,y){
+    const def = chipDefById(state.selectedPaletteId);
+    if(!def) return;
+    state.grid[y][x] = makeCell(def.id);
+    renderGrid();
+    log(`${coordToLabel(x,y)} placed: ${def.name}`, 'good');
+    // auto select placed cell
+    state.selectedCell = {x,y};
+    openInspectorForSelected();
+    renderGrid();
+  }
+
+  // Inspector
+  function openInspectorForSelected(){
+    const {x,y} = state.selectedCell;
+    const cellData = state.grid[y][x];
+
+    insMetaEl.textContent = `${coordToLabel(x,y)}${(x===START.x && y===START.y) ? ' · START' : ''}`;
+    insCoordEl.textContent = coordToLabel(x,y);
+
+    // populate chip type dropdown
+    insChipTypeEl.innerHTML = CHIP_DEFS.map(def=>{
+      return `<option value="${def.id}">${def.badge}:${def.name}</option>`;
+    }).join('');
+
+    if(!cellData){
+      insEmptyEl.style.display = '';
+      insBodyEl.style.display = 'none';
+      return;
+    }
+
+    insEmptyEl.style.display = 'none';
+    insBodyEl.style.display = '';
+
+    insChipTypeEl.value = cellData.typeId;
+    insNameEl.value = cellData.displayName || '';
+
+    // parameters panel
+    renderParams(cellData);
+
+    // arrow modes
+    renderArrowPads(cellData);
+
+    // meta pill
+    const def = findDefForCell(cellData);
+    arrowModeEl.innerHTML = '';
+    if(def && def.kind==='COND'){
+      arrowModeEl.innerHTML = `<span class="tag good"><span class="dot"></span>True矢印使用</span> <span class="tag bad"><span class="dot"></span>False矢印使用</span>`;
+    } else {
+      arrowModeEl.innerHTML = `<span class="tag warn"><span class="dot"></span>Next矢印使用</span>`;
+    }
+
+    // settings
+    insMaxStepsEl.value = state.maxSteps;
+    insTickSecEl.value = state.tickSec.toFixed(2);
+  }
+
+  function renderParams(cellData){
+    const def = findDefForCell(cellData);
+    const kind = def ? def.kind : '';
+    let html = '';
+
+    // For mock: HazardInRange has R, others optional note.
+    if(def && def.name==='HazardInRange'){
+      const r = (cellData.params.R ?? 1.5);
+      html += `<input type="number" id="paramR" min="0" max="99" step="0.1" value="${r}" />`;
+      html += `<div class="tiny" style="margin-top:6px">R（タイル）: 近くの危険検知半径（モック）</div>`;
+    } else if(kind==='COND'){
+      html += `<div class="help">この条件はモックでは「右のスナップショットON/OFF」で判定します。</div>`;
+    } else if(def && def.name==='Wait'){
+      html += `<input type="text" id="paramNote" value="${escapeHtml(cellData.params.note||'0.1s')}" />`;
+      html += `<div class="tiny" style="margin-top:6px">表示メモ（モック）</div>`;
+    } else if(kind==='ACT'){
+      // show blocking ticks for running actions
+      const busy = busyTicksFor(def.name);
+      if(busy>0){
+        html += `<div class="help">このACTはモックでは <b>${busy}Tick</b> ぶん Running（待ち）してからSuccessになります。</div>`;
+      } else {
+        html += `<div class="help">このACTはモックでは Yield（0.1秒）として扱います。</div>`;
+      }
+    } else if(kind==='NOP'){
+      html += `<div class="help">NOP（時間消費なし）。Next矢印で次へ進みます。</div>`;
+    } else {
+      html += `<div class="help">—</div>`;
+    }
+
+    insParamsEl.innerHTML = html;
+
+    // wire events
+    const paramR = document.getElementById('paramR');
+    if(paramR){
+      paramR.addEventListener('input', ()=>{
+        cellData.params.R = parseFloat(paramR.value);
+        renderGrid();
+      });
+    }
+    const paramNote = document.getElementById('paramNote');
+    if(paramNote){
+      paramNote.addEventListener('input', ()=>{
+        cellData.params.note = paramNote.value;
+      });
+    }
+  }
+
+  function renderArrowPads(cellData){
+    // Build 3 pads: True/False/Next
+    buildPad(padTrueEl, (dir)=>{ cellData.t = dir; renderGrid(); });
+    buildPad(padFalseEl,(dir)=>{ cellData.f = dir; renderGrid(); });
+    buildPad(padNextEl, (dir)=>{ cellData.next = dir; renderGrid(); });
+  }
+
+  function buildPad(root, onSet){
+    root.innerHTML = '';
+    // layout: [ ][U][ ]
+    //         [L][.][R]
+    //         [ ][D][ ]
+    const mk = (text, dirKey, isSpacer=false)=>{
+      const b = document.createElement('button');
+      if(isSpacer){
+        b.className = 'spacer';
+        b.disabled = true;
+        b.textContent = '';
+      }else{
+        b.textContent = text;
+        b.addEventListener('click', ()=>onSet(dirKey));
+      }
+      return b;
+    };
+    root.appendChild(mk('', null, true));
+    root.appendChild(mk('↑','U'));
+    root.appendChild(mk('', null, true));
+
+    root.appendChild(mk('←','L'));
+    root.appendChild(mk('—', null)); // clear
+    root.lastChild.addEventListener('click', ()=>onSet(null));
+    root.appendChild(mk('→','R'));
+
+    root.appendChild(mk('', null, true));
+    root.appendChild(mk('↓','D'));
+    root.appendChild(mk('', null, true));
+  }
+
+  // Events: inspector bindings
+  insChipTypeEl.addEventListener('change', ()=>{
+    const {x,y} = state.selectedCell;
+    const newId = insChipTypeEl.value;
+    state.grid[y][x] = makeCell(newId);
+    openInspectorForSelected();
+    renderGrid();
+    const def = chipDefById(newId);
+    log(`${coordToLabel(x,y)} changed to ${def?def.name:newId}`, 'good');
+  });
+
+  insNameEl.addEventListener('input', ()=>{
+    const {x,y} = state.selectedCell;
+    const cellData = state.grid[y][x];
+    if(!cellData) return;
+    cellData.displayName = insNameEl.value;
+    renderGrid();
+  });
+
+  insMaxStepsEl.addEventListener('input', ()=>{
+    state.maxSteps = clampInt(insMaxStepsEl.value, 1, 512);
+    renderGrid();
+  });
+  insTickSecEl.addEventListener('input', ()=>{
+    const v = parseFloat(insTickSecEl.value);
+    state.tickSec = clamp(v, 0.01, 1);
+    document.getElementById('tickLabel').textContent = `${state.tickSec.toFixed(2)}s`;
+  });
+
+  function clampInt(v, a, b){
+    const n = parseInt(v,10);
+    if(Number.isNaN(n)) return a;
+    return Math.max(a, Math.min(b, n));
+  }
+  function clamp(v,a,b){
+    if(Number.isNaN(v)) return a;
+    return Math.max(a, Math.min(b, v));
+  }
+
+  // Snapshot bindings
+  function bindSnap(){
+    snapEnemyEl.checked = state.snapshot.enemy;
+    snapTreasureEl.checked = state.snapshot.treasure;
+    snapExitEl.checked = state.snapshot.exit;
+    snapHazardSelfEl.checked = state.snapshot.hazardSelf;
+    snapHazardNearEl.checked = state.snapshot.hazardNear;
+
+    snapEnemyEl.addEventListener('change', ()=> state.snapshot.enemy = snapEnemyEl.checked);
+    snapTreasureEl.addEventListener('change', ()=> state.snapshot.treasure = snapTreasureEl.checked);
+    snapExitEl.addEventListener('change', ()=> state.snapshot.exit = snapExitEl.checked);
+    snapHazardSelfEl.addEventListener('change', ()=> state.snapshot.hazardSelf = snapHazardSelfEl.checked);
+    snapHazardNearEl.addEventListener('change', ()=> state.snapshot.hazardNear = snapHazardNearEl.checked);
+  }
+
+  // Tick simulation (mock)
+  function busyTicksFor(name){
+    // 0 => treat as Yield
+    const map = {
+      'Attack': 3,
+      'Dodge': 1,
+      'Heal': 2
+    };
+    return map[name] || 0;
+  }
+
+  function evalCondition(defName, cellData){
+    // This is mock: uses snapshot toggles
+    switch(defName){
+      case 'EnemyExists': return !!state.snapshot.enemy;
+      case 'TreasureExists': return !!state.snapshot.treasure;
+      case 'ExitExists': return !!state.snapshot.exit;
+      case 'HazardOnSelf': return !!state.snapshot.hazardSelf;
+      case 'HazardInRange':
+        // if hazardNear toggle true, we say it's in range; else false.
+        // if you want R to matter later, implement distance model.
+        return !!state.snapshot.hazardNear;
+      default: return false;
+    }
+  }
+
+  function runTick(times=1){
+    for(let i=0;i<times;i++){
+      singleTick();
+    }
+    renderGrid();
+    openInspectorForSelected(); // keep right panel in sync
+  }
+
+  function singleTick(){
+    state.stepCounter = 0;
+    log(`— Tick start (PC=${coordToLabel(state.pc.x,state.pc.y)})`, 'muted');
+
+    let steps = 0;
+    while(steps < state.maxSteps){
+      state.stepCounter = steps+1;
+
+      const {x,y} = state.pc;
+      const cellData = state.grid[y][x];
+
+      if(!cellData){
+        log(`[${steps+1}] ${coordToLabel(x,y)} is WALL → PC=START`, 'warn');
+        state.pc = {...START};
+        steps++;
+        continue;
+      }
+
+      const def = findDefForCell(cellData);
+      if(!def){
+        log(`[${steps+1}] ${coordToLabel(x,y)} unknown chip → PC=START`, 'warn');
+        state.pc = {...START};
+        steps++;
+        continue;
+      }
+
+      const chipLabel = cellData.displayName || def.name;
+
+      // Execute
+      if(def.kind==='NOP'){
+        const nd = cellData.next;
+        log(`[${steps+1}] NOP "${chipLabel}" → Success, Next=${dirLabel(nd)}`, 'good');
+        if(!advancePC(nd)){
+          log(`  hit WALL → PC=START`, 'warn');
+        }
+        steps++;
+        continue;
+      }
+
+      if(def.kind==='COND'){
+        const cond = evalCondition(def.name, cellData);
+        const nd = cond ? cellData.t : cellData.f;
+        log(`[${steps+1}] COND "${chipLabel}" = ${cond?'True':'False'} → Next=${dirLabel(nd)}`, cond?'good':'bad');
+        if(!advancePC(nd)){
+          log(`  hit WALL → PC=START`, 'warn');
+        }
+        steps++;
+        continue;
+      }
+
+      if(def.kind==='ACT'){
+        const busy = busyTicksFor(def.name);
+        if(busy<=0){
+          // Yield action
+          const nd = cellData.next;
+          log(`[${steps+1}] ACT "${chipLabel}" → Yield, Next=${dirLabel(nd)} (Tick end)`, 'warn');
+          advancePC(nd) || log(`  hit WALL → PC=START`, 'warn');
+          // Tick ends immediately
+          return;
+        } else {
+          // Running action (mock)
+          if(cellData.rt.remaining===0){
+            cellData.rt.remaining = busy;
+            log(`[${steps+1}] ACT "${chipLabel}" start → Running (${busy} ticks) (Tick end)`, 'warn');
+            return;
+          } else {
+            cellData.rt.remaining -= 1;
+            if(cellData.rt.remaining>0){
+              log(`[${steps+1}] ACT "${chipLabel}" running… (${cellData.rt.remaining} left) (Tick end)`, 'warn');
+              return;
+            } else {
+              log(`[${steps+1}] ACT "${chipLabel}" finished → Success`, 'good');
+              // on finish, continue within this tick (Success doesn't end tick)
+              const nd = cellData.next;
+              if(!advancePC(nd)){
+                log(`  hit WALL → PC=START`, 'warn');
+              }
+              steps++;
+              continue;
+            }
+          }
+        }
+      }
+
+      // fallback
+      log(`[${steps+1}] ??? → PC=START`, 'warn');
+      state.pc = {...START};
+      steps++;
+    }
+
+    log(`MAX_STEPS reached (${state.maxSteps}) — Tick end`, 'warn');
+  }
+
+  function advancePC(dirKey){
+    const n = nextPos(state.pc, dirKey);
+    if(!n){
+      state.pc = {...START};
+      return false;
+    }
+    // if destination cell is empty -> wall -> start
+    if(!state.grid[n.y][n.x]){
+      state.pc = {...START};
+      return false;
+    }
+    state.pc = n;
+    return true;
+  }
+
+  // Buttons
+  document.getElementById('btnRunTick').addEventListener('click', ()=>runTick(1));
+  document.getElementById('btnRun10').addEventListener('click', ()=>runTick(10));
+  document.getElementById('btnResetPC').addEventListener('click', ()=>{
+    state.pc = {...START};
+    log(`PC reset → ${coordToLabel(state.pc.x,state.pc.y)}`, 'warn');
+    renderGrid();
+  });
+  document.getElementById('btnClear').addEventListener('click', ()=>{
+    if(!confirm('グリッドを全消去しますか？')) return;
+    state.grid = Array.from({length: GRID_H}, ()=> Array.from({length: GRID_W}, ()=> null));
+    state.pc = {...START};
+    state.logLines = [];
+    renderGrid();
+    openInspectorForSelected();
+    renderLog();
+  });
+
+  // Import/Export
+  document.getElementById('btnExport').addEventListener('click', ()=>{
+    const payload = exportState();
+    openModal(JSON.stringify(payload, null, 2), false);
+  });
+  document.getElementById('btnImport').addEventListener('click', ()=>{
+    openModal('', true);
+  });
+
+  function exportState(){
+    // serialize grid with null or cell objects
+    return {
+      version: 1,
+      w: GRID_W,
+      h: GRID_H,
+      start: START,
+      pc: state.pc,
+      tickSec: state.tickSec,
+      maxSteps: state.maxSteps,
+      grid: state.grid.map(row=> row.map(c=>{
+        if(!c) return null;
+        // don't export runtime counters
+        const {rt, ...rest} = c;
+        return rest;
+      }))
+    };
+  }
+
+  function importState(obj){
+    if(!obj || !obj.grid) throw new Error('Invalid JSON');
+    // grid dims must match for this mock
+    if(obj.w!==GRID_W || obj.h!==GRID_H) throw new Error('Grid size mismatch (mock is fixed 12×12)');
+    state.tickSec = clamp(parseFloat(obj.tickSec||0.1), 0.01, 1);
+    state.maxSteps = clampInt(obj.maxSteps||32, 1, 512);
+    state.pc = (obj.pc && inBounds(obj.pc.x,obj.pc.y)) ? obj.pc : {...START};
+    // rebuild grid
+    state.grid = obj.grid.map((row,y)=> row.map((c,x)=>{
+      if(!c) return null;
+      const cell = makeCell(c.typeId || 'NOP');
+      cell.displayName = c.displayName || '';
+      cell.next = (c.next===null ? null : c.next) ?? cell.next;
+      cell.t = (c.t===null ? null : c.t) ?? cell.t;
+      cell.f = (c.f===null ? null : c.f) ?? cell.f;
+      cell.params = c.params || {};
+      cell.rt = {remaining:0};
+      return cell;
+    }));
+  }
+
+  function openModal(text, isImport){
+    modalEl.style.display = 'flex';
+    modalTextEl.value = text || '';
+    document.getElementById('modalApply').style.display = isImport ? '' : 'none';
+    modalTextEl.focus();
+  }
+  function closeModal(){
+    modalEl.style.display = 'none';
+  }
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  modalEl.addEventListener('click', (ev)=>{ if(ev.target===modalEl) closeModal(); });
+
+  document.getElementById('modalApply').addEventListener('click', ()=>{
+    try{
+      const txt = modalTextEl.value.trim();
+      const obj = JSON.parse(txt);
+      importState(obj);
+      state.logLines = [];
+      log('Imported successfully', 'good');
+      renderGrid();
+      openInspectorForSelected();
+      closeModal();
+    }catch(e){
+      alert('Import failed: ' + e.message);
+    }
+  });
+
+  document.getElementById('modalCopy').addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(modalTextEl.value);
+      alert('Copied!');
+    }catch(e){
+      alert('Copy failed. (ブラウザ権限/HTTPS等の制約がある場合があります)');
+    }
+  });
+
+  // Search
+  searchEl.addEventListener('input', renderPalette);
+
+  // Init
+  function init(){
+    pillSelEl.textContent = '選択: NOP';
+    document.getElementById('startLabel').textContent = coordToLabel(START.x, START.y);
+    document.getElementById('gridSizeLabel').textContent = `${GRID_W}×${GRID_H}`;
+    document.getElementById('tickLabel').textContent = `${state.tickSec.toFixed(2)}s`;
+    renderPalette();
+    renderGrid();
+    bindSnap();
+    state.selectedCell = {...START};
+    openInspectorForSelected();
+    renderLog();
+
+    // Tip: double click on cell to place selected palette chip
+    log('Tip: グリッドはダブルクリックで配置（右クリックで削除）', 'muted');
+  }
+  init();
+
+})();
+</script>
+</body>
+</html>
