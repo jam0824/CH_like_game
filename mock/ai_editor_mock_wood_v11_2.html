@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AIエディタ（木製ピクセルUI風）モック v11.1</title>
+  <style>
+    :root{
+      /* Palette (approx.) */
+      --wood-0:#2b1b0d;
+      --wood-1:#49301c;
+      --wood-2:#674d2b;
+      --wood-3:#a36a30;
+      --wood-4:#dba569;
+
+      --panel:#c89a5c;
+      --panel-2:#b8874e;
+      --ink:#1d120a;
+      --text:#f6e3c5;
+
+      --chip:#3b2717;
+      --chip-hi:#4a2f1b;
+      --chip-edge:#25170d;
+
+      --green:#77a23a;
+      --green-d:#5d872b;
+      --red:#e05a4f;      /* True（赤寄りピンク） */
+      --red-d:#b6463f;
+
+      --gold:#f0c04a;
+      --shadow:rgba(0,0,0,.35);
+      --shadow2:rgba(0,0,0,.55);
+
+      --ui:#2b1b0d;
+      --ui2:rgba(255,255,255,.16);
+      --ui3:rgba(0,0,0,.20);
+    }
+
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      letter-spacing: .2px;
+      background:
+        radial-gradient(900px 420px at 50% -10%, rgba(255,255,255,.08), transparent 60%),
+        repeating-linear-gradient( 90deg, rgba(0,0,0,.08) 0 10px, rgba(255,255,255,.02) 10px 22px),
+        linear-gradient(180deg, #2a190c, #201207 55%, #150c04);
+    }
+    *{ box-sizing:border-box; }
+
+    .bevel{
+      box-shadow:
+        inset 2px 2px 0 rgba(255,255,255,.08),
+        inset -2px -2px 0 rgba(0,0,0,.35);
+    }
+
+    .app{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding:14px;
+      gap:12px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    /* Top */
+    .topbar{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      background: linear-gradient(180deg, var(--wood-2), var(--wood-1));
+      border-radius: 10px;
+      border:3px solid rgba(0,0,0,.35);
+      box-shadow: 0 10px 16px var(--shadow2);
+    }
+    .brand{
+      font-weight:900;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+      padding:6px 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.12));
+      border-radius: 8px;
+      border:2px solid rgba(0,0,0,.35);
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .brand small{
+      font-weight:800;
+      opacity:.9;
+      font-size:12px;
+      padding:4px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+    .tab{
+      padding:8px 12px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.18));
+      border:2px solid rgba(0,0,0,.35);
+      color:var(--text);
+      cursor:default;
+      user-select:none;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+      font-weight:800;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .tab.active{
+      background: linear-gradient(180deg, var(--green), var(--green-d));
+      border-color: rgba(0,0,0,.45);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.10);
+    }
+
+    /* Layout */
+    .content{
+      display:grid;
+      grid-template-columns: 330px 1fr 360px;
+      gap:12px;
+      min-height: 0;
+      flex:1;
+    }
+
+    /* Shared panel */
+    .panel{
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border:3px solid rgba(0,0,0,.35);
+      box-shadow: 0 10px 16px var(--shadow2);
+      overflow:hidden;
+    }
+    .ph{
+      padding:10px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10));
+      border-bottom:2px solid rgba(0,0,0,.25);
+      font-weight:900;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .pc{
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      color: #2b1b0d;
+      font-weight:800;
+      min-height:0;
+    }
+
+    /* Left palette */
+    .left{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .left .pc{ gap:12px; }
+
+    .searchbox{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      background: rgba(255,255,255,.16);
+      border:2px solid rgba(0,0,0,.20);
+      border-radius: 12px;
+      padding:8px 10px;
+    }
+    .searchbox .mag{
+      width:18px; height:18px;
+      opacity:.9;
+    }
+    .searchbox input{
+      width:100%;
+      border:0;
+      outline:none;
+      background: transparent;
+      font-weight:900;
+      color: #2b1b0d;
+      font-size:13px;
+    }
+    .searchbox input::placeholder{ color: rgba(43,27,13,.60); }
+
+    .filters{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .seg{
+      padding:7px 10px;
+      border-radius: 999px;
+      border:2px solid rgba(0,0,0,.25);
+      background: rgba(255,255,255,.16);
+      font-weight:1000;
+      font-size:12px;
+      color:#2b1b0d;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .seg.active{
+      background: linear-gradient(180deg, rgba(119,162,58,.85), rgba(93,135,43,.90));
+      color:#fff;
+      border-color: rgba(0,0,0,.35);
+      text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+    }
+    .chipicon{
+      width:14px; height:14px;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,.25));
+    }
+
+    .sections{
+      min-height:0;
+      overflow:auto;
+      padding-right:2px;
+    }
+    .sections::-webkit-scrollbar{ width: 12px; }
+    .sections::-webkit-scrollbar-thumb{
+      background: rgba(43,27,13,.25);
+      border:3px solid rgba(0,0,0,.15);
+      border-radius: 999px;
+    }
+    .sections::-webkit-scrollbar-track{ background: rgba(0,0,0,.08); border-radius: 999px; }
+
+    details{
+      border-radius: 12px;
+      border:2px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.12);
+      margin-bottom:10px;
+      overflow:hidden;
+    }
+    summary{
+      list-style:none;
+      cursor:default;
+      user-select:none;
+      padding:10px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-weight:1000;
+      color:#2b1b0d;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .sum-left{ display:flex; align-items:center; gap:8px; }
+    .caret{
+      width:0; height:0;
+      border-left: 6px solid rgba(43,27,13,.75);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      transform: rotate(0deg);
+    }
+    details[open] .caret{ transform: rotate(90deg); }
+    .count{
+      padding:4px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.10);
+      border:1px solid rgba(0,0,0,.12);
+      font-size:12px;
+    }
+    .tilegrid{
+      padding:10px;
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap:10px;
+    }
+
+    .ctile{
+      position:relative;
+      border-radius: 12px;
+      border:2px solid rgba(0,0,0,.22);
+      background: rgba(0,0,0,.06);
+      padding:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      min-height:58px;
+    }
+    .ctile.selected{
+      outline: 3px solid rgba(240,192,74,.75);
+      outline-offset: 2px;
+      background: rgba(240,192,74,.10);
+    }
+    .ctile .i{
+      width:36px; height:36px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(0,0,0,.08));
+      border:2px solid rgba(0,0,0,.18);
+      display:grid;
+      place-items:center;
+      flex: 0 0 auto;
+    }
+    .ctile .i svg{ width:22px; height:22px; }
+    .ctile .t{ min-width:0; }
+    .ctile .name{
+      font-weight:1000;
+      font-size:13px;
+      color:#2b1b0d;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      margin-bottom:4px;
+    }
+    .ctile .meta{ display:flex; gap:6px; flex-wrap:wrap; }
+    .badge{
+      padding:4px 7px;
+      border-radius: 999px;
+      border:2px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.16);
+      font-size:11px;
+      font-weight:1000;
+      color:#2b1b0d;
+    }
+    .badge.req{ background: rgba(224,90,79,.16); border-color: rgba(0,0,0,.20); }
+    .tag{
+      padding:4px 7px;
+      border-radius: 999px;
+      border:2px solid rgba(0,0,0,.18);
+      font-size:11px;
+      font-weight:1000;
+      color:#fff;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.25);
+    }
+    .tag.instant{ background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.35)); }
+    .tag.yield{ background: linear-gradient(180deg, var(--green), var(--green-d)); }
+    .tag.running{ background: linear-gradient(180deg, var(--red), var(--red-d)); }
+
+    /* Board */
+    .board{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .board-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border:3px solid rgba(0,0,0,.35);
+      box-shadow: 0 10px 16px var(--shadow2);
+    }
+    .board-title{
+      color:#2b1b0d;
+      font-weight:1000;
+      text-shadow:none;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .legend{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      color:#2b1b0d;
+      font-weight:1000;
+      text-shadow:none;
+      font-size:12px;
+    }
+    .swatch{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:2px solid rgba(0,0,0,.25);
+      background: rgba(255,255,255,.18);
+    }
+    .dot{ width:10px; height:10px; border-radius: 2px; }
+    .dot.red{ background: var(--red); }
+    .dot.green{ background: var(--green); }
+    .dot.gold{ background: var(--gold); }
+
+    .grid-frame{
+      position:relative;
+      flex:1;
+      min-height:0;
+      padding:22px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, var(--wood-2), var(--wood-1));
+      border:4px solid rgba(0,0,0,.40);
+      box-shadow:
+        0 14px 24px var(--shadow2),
+        inset 0 0 0 2px rgba(255,255,255,.06);
+      overflow:hidden;
+    }
+    .grid-frame:before{
+      content:"";
+      position:absolute; inset:12px;
+      border-radius: 14px;
+      border:3px solid rgba(0,0,0,.35);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.06);
+      pointer-events:none;
+    }
+
+    .grid-wrap{
+      position:relative;
+      height:100%;
+      min-height:0;
+      padding-top:6px;
+    }
+
+    .grid{
+      --cell: 56px;
+      --gap: 12px; /* 矢印のために隙間を大きめ */
+      height:100%;
+      display:grid;
+      grid-template-columns: repeat(12, var(--cell));
+      grid-template-rows: repeat(12, var(--cell));
+      gap: var(--gap);
+      justify-content:center;
+      align-content:start;
+      padding:18px;
+      border-radius: 14px;
+      background: #23150c;
+      border:3px solid rgba(0,0,0,.35);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.06);
+      overflow:auto;
+      position:relative;
+    }
+
+    .cell{
+      position:relative;
+      border-radius: 10px;
+      background: rgba(0,0,0,.10);
+      border:2px solid rgba(0,0,0,.22);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.03);
+    }
+    .cell.empty{ background: rgba(0,0,0,.05); }
+
+    .cell.selected{
+      outline: 3px solid rgba(240,192,74,.85);
+      outline-offset: 0px;
+    }
+    .cell.dest-true{ outline: 3px solid rgba(224,90,79,.75); }
+    .cell.dest-false{ outline: 3px solid rgba(119,162,58,.70); }
+
+    .cell.inrange::after{
+      content:"";
+      position:absolute;
+      inset:3px;
+      border-radius: 8px;
+      background: rgba(240,192,74,.08);
+      border:2px dashed rgba(240,192,74,.22);
+      pointer-events:none;
+    }
+
+    .chip{
+      position:absolute; inset:4px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--chip-hi), var(--chip));
+      border:2px solid rgba(0,0,0,.38);
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,.05),
+        0 5px 0 rgba(0,0,0,.22);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .chip.startchip{
+      background: linear-gradient(180deg, rgba(119,162,58,.45), rgba(43,27,13,.90));
+      border-color: rgba(0,0,0,.45);
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,.08),
+        0 5px 0 rgba(0,0,0,.22);
+    }
+    .chip .sub{
+      position:absolute;
+      bottom:6px;
+      left:0; right:0;
+      text-align:center;
+      font-size:12px;
+      opacity:.95;
+      font-weight:1000;
+    }
+    .chip .badge{
+      position:absolute;
+      top:6px; left:6px;
+      width:18px; height:18px;
+      display:grid;
+      place-items:center;
+      font-size:12px;
+      font-weight:1000;
+      border-radius: 6px;
+      background: rgba(0,0,0,.35);
+      border:2px solid rgba(0,0,0,.35);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.06);
+      color:#fff;
+    }
+
+    .ico-big{
+      width:30px; height:30px;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,.55));
+    }
+    svg{ shape-rendering: crispEdges; }
+
+    /* Triangles (placed in the gaps) */
+    .tri{
+      position:absolute;
+      width:0; height:0;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,.55));
+      z-index: 5;
+    }
+    .tri.green{ --tri: var(--green); }
+    .tri.red{ --tri: var(--red); }
+
+    .tri.u{
+      top: calc(-1 * var(--gap) + 1px);
+      left:50%;
+      transform: translateX(-50%);
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 10px solid var(--tri);
+    }
+    .tri.d{
+      bottom: calc(-1 * var(--gap) + 1px);
+      left:50%;
+      transform: translateX(-50%);
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 10px solid var(--tri);
+    }
+    .tri.l{
+      left: calc(-1 * var(--gap) + 1px);
+      top:50%;
+      transform: translateY(-50%);
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+      border-right: 10px solid var(--tri);
+    }
+    .tri.r{
+      right: calc(-1 * var(--gap) + 1px);
+      top:50%;
+      transform: translateY(-50%);
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+      border-left: 10px solid var(--tri);
+    }
+
+    .tri.off1.u{ left:38%; }
+    .tri.off2.u{ left:62%; }
+    .tri.off1.d{ left:38%; }
+    .tri.off2.d{ left:62%; }
+    .tri.off1.l{ top:38%; }
+    .tri.off2.l{ top:62%; }
+    .tri.off1.r{ top:38%; }
+    .tri.off2.r{ top:62%; }
+
+    .warn{
+      position:absolute;
+      width:16px; height:16px;
+      display:grid;
+      place-items:center;
+      border-radius: 6px;
+      background: linear-gradient(180deg, rgba(240,192,74,.95), rgba(163,106,48,.85));
+      color: #2b1b0d;
+      font-weight:1000;
+      border:2px solid rgba(0,0,0,.35);
+      text-shadow:none;
+      z-index: 6;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,.45));
+    }
+    .warn.u{ top: calc(-1 * var(--gap) + 18px); left: calc(50% + 10px); transform: translateX(-50%); }
+    .warn.d{ bottom: calc(-1 * var(--gap) + 18px); left: calc(50% + 10px); transform: translateX(-50%); }
+    .warn.l{ left: calc(-1 * var(--gap) + 18px); top: calc(50% + 10px); transform: translateY(-50%); }
+    .warn.r{ right: calc(-1 * var(--gap) + 18px); top: calc(50% + 10px); transform: translateY(-50%); }
+
+    .ghost{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      color: rgba(255,255,255,.10);
+      font-weight:900;
+      font-size: 10px;
+      text-shadow:none;
+      user-select:none;
+      pointer-events:none;
+    }
+
+    .grid::-webkit-scrollbar{ width: 12px; height:12px; }
+    .grid::-webkit-scrollbar-thumb{
+      background: rgba(219,165,105,.35);
+      border:3px solid rgba(0,0,0,.35);
+      border-radius: 999px;
+    }
+    .grid::-webkit-scrollbar-track{ background: rgba(0,0,0,.18); border-radius: 999px; }
+
+    /* Right inspector */
+    .right{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    /* CSSだけで右タブを切り替えるためのラジオ（UIには出さない） */
+.right > input[type=radio]{
+  display:none;
+  position:absolute;
+  left:-9999px;
+}
+    .rtabs{
+      padding:10px 12px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10));
+      border-bottom:2px solid rgba(0,0,0,.25);
+    }
+    .rtabs input{ display:none; }
+    .rtab{
+      padding:7px 10px;
+      border-radius: 999px;
+      border:2px solid rgba(0,0,0,.30);
+      background: rgba(255,255,255,.14);
+      color:#2b1b0d;
+      font-weight:1000;
+      font-size:12px;
+      user-select:none;
+      cursor:pointer;
+    }
+    #tab-inspector:checked ~ .rtabs label[for="tab-inspector"],
+    #tab-overview:checked  ~ .rtabs label[for="tab-overview"],
+    #tab-debug:checked     ~ .rtabs label[for="tab-debug"],
+    #tab-help:checked      ~ .rtabs label[for="tab-help"]{
+      background: linear-gradient(180deg, var(--green), var(--green-d));
+      border-color: rgba(0,0,0,.40);
+      color:#fff;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+    }
+
+    .rcontent{ padding:12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:auto; color:#2b1b0d; font-weight:800; }
+    .rcontent::-webkit-scrollbar{ width: 12px; }
+    .rcontent::-webkit-scrollbar-thumb{ background: rgba(43,27,13,.25); border:3px solid rgba(0,0,0,.15); border-radius: 999px; }
+    .rcontent::-webkit-scrollbar-track{ background: rgba(0,0,0,.08); border-radius: 999px; }
+
+    .rpanel{ border-radius: 14px; background: rgba(255,255,255,.14); border:2px solid rgba(0,0,0,.20); padding:10px; }
+    .rpanel h3{ margin:0 0 10px; font-size:13px; font-weight:1000; }
+
+    .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .mini{
+      padding:6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      border:2px solid rgba(0,0,0,.20);
+      color:#2b1b0d;
+      font-weight:1000;
+      user-select:none;
+      font-size:12px;
+    }
+    .mini.red{ background: linear-gradient(180deg, var(--red), var(--red-d)); color:#fff; border-color: rgba(0,0,0,.35); text-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+    .mini.green{ background: linear-gradient(180deg, var(--green), var(--green-d)); color:#fff; border-color: rgba(0,0,0,.35); text-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+
+    .kv{ display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .kv .k{ font-size:12px; opacity:.85; }
+    .kv .v{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+
+    .slider{
+      width:160px;
+      height:10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.18);
+      border:2px solid rgba(0,0,0,.15);
+      position:relative;
+    }
+    .slider .fill{
+      position:absolute;
+      left:0; top:0; bottom:0;
+      width:50%;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(240,192,74,.95), rgba(163,106,48,.85));
+    }
+
+    .preset{ display:flex; flex-wrap:wrap; gap:6px; }
+    .preset .p{
+      padding:6px 9px;
+      border-radius: 999px;
+      border:2px solid rgba(0,0,0,.20);
+      background: rgba(255,255,255,.16);
+      font-weight:1000;
+      font-size:12px;
+      user-select:none;
+    }
+    .preset .p.active{ background: rgba(240,192,74,.35); outline:2px solid rgba(240,192,74,.55); }
+
+    .arrowpads{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .arrowpad{
+      display:grid;
+      grid-template-columns: 40px 40px 40px;
+      grid-template-rows: 40px 40px 40px;
+      gap:8px;
+      justify-content:center;
+      margin-top:8px;
+    }
+    .k{
+      display:grid;
+      place-items:center;
+      border-radius: 10px;
+      background: rgba(255,255,255,.18);
+      border:2px solid rgba(0,0,0,.20);
+      font-weight:1000;
+      user-select:none;
+    }
+    .k.empty{ background: transparent; border-color: transparent; }
+    .k.on{ outline: 3px solid rgba(240,192,74,.65); }
+
+    .hint{
+      font-size:12px;
+      line-height:1.45;
+      opacity:.92;
+    }
+
+    /* Bottom */
+    .bottombar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, var(--wood-2), var(--wood-1));
+      border:3px solid rgba(0,0,0,.35);
+      box-shadow: 0 10px 16px var(--shadow2);
+      font-weight:1000;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+    }
+    .bb-left,.bb-right{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill{
+      padding:8px 12px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.18));
+      border:2px solid rgba(0,0,0,.35);
+      user-select:none;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .pill.green{ background: linear-gradient(180deg, var(--green), var(--green-d)); }
+    .pill.gold{
+      color: #2b1b0d;
+      background: linear-gradient(180deg, rgba(240,192,74,.95), rgba(163,106,48,.85));
+      text-shadow:none;
+    }
+
+    @media (max-width: 1250px){
+      .content{ grid-template-columns: 320px 1fr; }
+      .right{ display:none; }
+    }
+    @media (max-width: 900px){
+      .content{ grid-template-columns: 1fr; }
+      .left{ display:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <div class="topbar">
+      <div class="brand">AI Editor <small>UI Mock v11.1</small></div>
+      <div class="tabs">
+        <div class="tab active">編集</div>
+        <div class="tab">テスト</div>
+        <div class="tab">チップ</div>
+        <div class="tab">ログ</div>
+        <div class="tab">設定</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Left: Chip palette -->
+      <aside class="panel left" aria-label="Chip palette">
+        <div class="ph">
+          <span>チップパレット</span>
+          <span class="count">スターター</span>
+        </div>
+        <div class="pc">
+          <div class="searchbox" aria-label="Search (mock)">
+            <svg class="mag" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <rect x="10" y="4" width="4" height="12" fill="#2b1b0d" opacity=".0"/>
+              <circle cx="10" cy="10" r="6" fill="none" stroke="#2b1b0d" stroke-width="2"/>
+              <rect x="15" y="15" width="7" height="2" transform="rotate(45 15 15)" fill="#2b1b0d"/>
+            </svg>
+            <input disabled placeholder="検索（敵 / 罠 / 宝箱 / HP…）" />
+          </div>
+
+          <div class="filters" aria-label="Filters (mock)">
+            <span class="seg active">スターター</span>
+            <span class="seg">すべて</span>
+            <span class="seg" title="最近">🕘 最近</span>
+            <span class="seg" title="お気に入り">★ お気に入り</span>
+          </div>
+
+          <div id="paletteSections" class="sections" aria-label="Palette sections"></div>
+
+          <div class="hint" style="background:rgba(0,0,0,.06); border:2px solid rgba(0,0,0,.15); border-radius:12px; padding:10px;">
+            クリックでスタンプ化 → 盤面クリックで配置（※モックでは未実装）。<br/>
+            条件チップは True=赤 / False=緑。空セルは壁扱い。
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center: Board -->
+      <main class="board">
+        <div class="board-header">
+          <div class="board-title">
+            <span class="pill gold" style="padding:6px 10px;">12×12</span>
+            <span>AI回路（UIモック）</span>
+          </div>
+          <div class="legend">
+            <div class="swatch"><span class="dot red"></span>True</div>
+            <div class="swatch"><span class="dot green"></span>False / 通常</div>
+            <div class="swatch"><span class="dot gold"></span>警告</div>
+          </div>
+        </div>
+
+        <section class="grid-frame" aria-label="Grid frame">
+          <div class="grid-wrap">
+            <div id="grid" class="grid" aria-label="AI grid"></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Right: Inspector -->
+      <aside class="panel right" aria-label="Inspector">
+        <input type="radio" name="rt" id="tab-inspector" checked>
+        <input type="radio" name="rt" id="tab-overview">
+        <input type="radio" name="rt" id="tab-debug">
+        <input type="radio" name="rt" id="tab-help">
+
+        <div class="ph" style="border-bottom:0;">情報パレット</div>
+        <div class="rtabs" role="tablist" aria-label="Right tabs">
+          <label class="rtab" for="tab-inspector">インスペクタ</label>
+          <label class="rtab" for="tab-overview">概要・検証</label>
+          <label class="rtab" for="tab-debug">デバッグ</label>
+          <label class="rtab" for="tab-help">ヘルプ</label>
+        </div>
+
+        <div class="rcontent">
+          <!-- Inspector panel -->
+          <section class="rpanel" aria-label="Inspector panel">
+            <h3>選択中チップ</h3>
+            <div class="row">
+              <div class="mini">条件：HazardInRange</div>
+              <div class="mini">座標：C1（例）</div>
+            </div>
+
+            <div style="height:8px;"></div>
+
+            <div class="row">
+              <span class="mini">削除</span>
+              <span class="mini">置き換え</span>
+              <span class="mini">複製→スタンプ</span>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="kv">
+              <div class="k">挙動</div>
+              <div class="v"><span class="badge">Instant</span></div>
+            </div>
+
+            <div style="height:8px;"></div>
+
+            <div class="kv">
+              <div class="k">否定（!）</div>
+              <div class="v"><span class="badge">OFF</span></div>
+            </div>
+          </section>
+
+          <section class="rpanel" aria-label="Arrow settings">
+            <h3>矢印設定（True / False）</h3>
+            <div class="arrowpads">
+              <div>
+                <div class="mini red" style="display:inline-flex;">True</div>
+                <div class="arrowpad" aria-label="Arrow pad true">
+                  <div class="k empty"></div>
+                  <div class="k">↑</div>
+                  <div class="k empty"></div>
+                  <div class="k">←</div>
+                  <div class="k">•</div>
+                  <div class="k on">→</div>
+                  <div class="k empty"></div>
+                  <div class="k">↓</div>
+                  <div class="k empty"></div>
+                </div>
+              </div>
+              <div>
+                <div class="mini green" style="display:inline-flex;">False</div>
+                <div class="arrowpad" aria-label="Arrow pad false">
+                  <div class="k empty"></div>
+                  <div class="k">↑</div>
+                  <div class="k empty"></div>
+                  <div class="k">←</div>
+                  <div class="k">•</div>
+                  <div class="k">→</div>
+                  <div class="k empty"></div>
+                  <div class="k on">↓</div>
+                  <div class="k empty"></div>
+                </div>
+              </div>
+            </div>
+            <div class="hint" style="margin-top:10px;">
+              空セル（壁）へ向く矢印は⚠で注意表示（実行時はSTARTへ戻る）。
+            </div>
+          </section>
+
+          <section class="rpanel" aria-label="Params">
+            <h3>パラメータ</h3>
+
+            <div class="kv">
+              <div class="k">R（タイル）</div>
+              <div class="v">
+                <span class="badge">2</span>
+                <div class="slider" aria-label="Slider mock"><div class="fill" style="width:25%"></div></div>
+              </div>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="k" style="font-size:12px; opacity:.85;">プリセット</div>
+            <div class="preset" aria-label="R presets">
+              <span class="p">1</span>
+              <span class="p active">2</span>
+              <span class="p">3</span>
+              <span class="p">4</span>
+              <span class="p">6</span>
+              <span class="p">8</span>
+              <span class="p">MAX</span>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="row">
+              <span class="mini">設定コピー</span>
+              <span class="mini">貼り付け</span>
+            </div>
+          </section>
+
+          <!-- Overview/Validation preview -->
+          <section class="rpanel" aria-label="Overview" style="opacity:.95;">
+            <h3>概要・検証（プレビュー）</h3>
+            <div class="kv">
+              <div class="k">到達可能</div>
+              <div class="v"><span class="badge">9 / 144</span></div>
+            </div>
+            <div class="kv">
+              <div class="k">警告</div>
+              <div class="v"><span class="badge">1</span></div>
+            </div>
+            <div style="height:8px;"></div>
+            <div class="hint" style="background:rgba(255,255,255,.12); border:2px solid rgba(0,0,0,.12); border-radius:12px; padding:10px;">
+              ⚠ (HazardInRange) False↓ が空セル（壁）に向いています。<br/>
+              <span class="badge">クイックフィックス</span>
+              <div style="height:8px"></div>
+              <div class="row">
+                <span class="mini">NOPを自動配置</span>
+                <span class="mini">矢印方向を修正</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="hint" style="text-align:center; opacity:.8;">※UI確認用（ロジック未実装）</div>
+        </div>
+      </aside>
+
+    </div>
+
+    <div class="bottombar">
+      <div class="bb-left">
+        <div class="pill green">▶ テスト実行（ダミー）</div>
+        <div class="pill">Step: 5 / 36</div>
+        <div class="pill">Warning: 1</div>
+      </div>
+      <div class="bb-right">
+        <div class="pill">PC: (0,0)</div>
+        <div class="pill">Tick: 0.1s</div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  // ---- Icons (simple pixel-ish SVGs) ----
+  const ICONS = {
+    start: svgWrap(`
+      <polygon points="12,9 24,16 12,23" fill="#f6e3c5"/>
+      <rect x="7" y="9" width="3" height="14" fill="#f0c04a"/>
+    `),
+    nop: svgWrap(`
+      <rect x="8" y="15" width="4" height="4" fill="#f6e3c5"/>
+      <rect x="14" y="15" width="4" height="4" fill="#f6e3c5"/>
+      <rect x="20" y="15" width="4" height="4" fill="#f6e3c5"/>
+    `),
+    enemy: svgWrap(`
+      <rect x="10" y="8" width="12" height="12" fill="#f6e3c5"/>
+      <rect x="12" y="12" width="3" height="3" fill="#2b1b0d"/>
+      <rect x="17" y="12" width="3" height="3" fill="#2b1b0d"/>
+      <rect x="13" y="20" width="6" height="4" fill="#f6e3c5"/>
+      <rect x="14" y="22" width="4" height="2" fill="#2b1b0d"/>
+    `),
+    chest: svgWrap(`
+      <rect x="8" y="13" width="16" height="12" fill="#f6e3c5"/>
+      <rect x="8" y="11" width="16" height="4" fill="#dba569"/>
+      <rect x="14" y="13" width="4" height="12" fill="#2b1b0d"/>
+      <rect x="15" y="17" width="2" height="3" fill="#f0c04a"/>
+    `),
+    exit: svgWrap(`
+      <rect x="9" y="21" width="14" height="4" fill="#f6e3c5"/>
+      <rect x="9" y="17" width="10" height="4" fill="#f6e3c5"/>
+      <rect x="9" y="13" width="6" height="4" fill="#f6e3c5"/>
+      <rect x="20" y="11" width="3" height="14" fill="#f0c04a"/>
+    `),
+    hazard: svgWrap(`
+      <polygon points="16,7 27,26 5,26" fill="#f0c04a"/>
+      <rect x="15" y="13" width="2" height="8" fill="#2b1b0d"/>
+      <rect x="15" y="23" width="2" height="2" fill="#2b1b0d"/>
+    `),
+    move: svgWrap(`
+      <rect x="10" y="9" width="10" height="10" fill="#f6e3c5"/>
+      <rect x="9" y="19" width="14" height="4" fill="#dba569"/>
+      <rect x="8" y="23" width="16" height="3" fill="#f6e3c5"/>
+    `),
+    evade: svgWrap(`
+      <rect x="7" y="18" width="18" height="4" fill="#f6e3c5"/>
+      <rect x="10" y="12" width="12" height="4" fill="#dba569"/>
+      <rect x="12" y="8" width="8" height="3" fill="#f6e3c5"/>
+    `),
+    wait: svgWrap(`
+      <rect x="12" y="7" width="8" height="4" fill="#f6e3c5"/>
+      <rect x="11" y="11" width="10" height="6" fill="#dba569"/>
+      <rect x="12" y="17" width="8" height="8" fill="#f6e3c5"/>
+      <rect x="14" y="13" width="4" height="2" fill="#2b1b0d"/>
+    `),
+    hp: svgWrap(`
+      <rect x="9" y="12" width="4" height="4" fill="#f6e3c5"/>
+      <rect x="19" y="12" width="4" height="4" fill="#f6e3c5"/>
+      <rect x="11" y="10" width="10" height="4" fill="#f6e3c5"/>
+      <rect x="11" y="16" width="10" height="6" fill="#f6e3c5"/>
+      <rect x="12" y="22" width="8" height="2" fill="#dba569"/>
+    `)
+  };
+
+  function svgWrap(paths){
+    return `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">${paths}</svg>`;
+  }
+
+  // ---- Left palette (static render) ----
+  const PALETTE = [
+    {
+      title: "スターター",
+      open: true,
+      chips: [
+        { key:"START", icon:"start", badge:"", tag:"Instant", desc:"開始チップ（PCの初期位置/戻り先）" },
+        { key:"NOP", icon:"nop", badge:"", tag:"Instant", desc:"道（処理なし）" },
+        { key:"EnemyExists", icon:"enemy", badge:"R=4", tag:"Instant", desc:"R以内に敵が存在する" },
+        { key:"TreasureExists", icon:"chest", badge:"R=4", tag:"Instant", desc:"R以内に宝箱が存在する" },
+        { key:"ExitExists", icon:"exit", badge:"R=6", tag:"Instant", desc:"R以内に出口が存在する" },
+        { key:"HazardOnSelf", icon:"hazard", badge:"—", tag:"Instant", desc:"自分の足元が危険か" },
+        { key:"HazardInRange", icon:"hazard", badge:"R=2", tag:"Instant", desc:"R以内に危険が存在する" },
+        { key:"MoveToTreasure", icon:"move", badge:"", tag:"Yield", desc:"宝箱へ移動（0.1s）" },
+        { key:"MoveToExit", icon:"move", badge:"", tag:"Yield", desc:"出口へ移動（0.1s）" },
+        { key:"EvadeHazard", icon:"evade", badge:"", tag:"Yield", desc:"危険回避（1手）" },
+        { key:"Wait", icon:"wait", badge:"t=0.5s", tag:"Running", desc:"指定時間だけ思考停止" },
+        { key:"SelfHP", icon:"hp", badge:"<50%", tag:"Instant", desc:"HP%を比較" }
+      ]
+    },
+    {
+      title: "基本",
+      open: false,
+      chips: [
+        { key:"START", icon:"start", badge:"", tag:"Instant" },
+        { key:"NOP", icon:"nop", badge:"", tag:"Instant" }
+      ]
+    },
+    {
+      title: "行動（ACT）",
+      open: false,
+      chips: [
+        { key:"MoveToTreasure", icon:"move", badge:"", tag:"Yield" },
+        { key:"MoveToExit", icon:"move", badge:"", tag:"Yield" },
+        { key:"EvadeHazard", icon:"evade", badge:"", tag:"Yield" },
+        { key:"Wait", icon:"wait", badge:"t=0.5s", tag:"Running" }
+      ]
+    },
+    {
+      title: "条件：世界センサー",
+      open: false,
+      chips: [
+        { key:"EnemyExists", icon:"enemy", badge:"R=4", tag:"Instant" },
+        { key:"TreasureExists", icon:"chest", badge:"R=4", tag:"Instant" },
+        { key:"ExitExists", icon:"exit", badge:"R=6", tag:"Instant" },
+        { key:"HazardOnSelf", icon:"hazard", badge:"—", tag:"Instant" },
+        { key:"HazardInRange", icon:"hazard", badge:"R=2", tag:"Instant" }
+      ]
+    },
+    {
+      title: "Advanced / Coming Soon",
+      open: false,
+      chips: [
+        { key:"Attack", icon:"enemy", badge:"", tag:"Yield", desc:"（未実装）" },
+        { key:"Random", icon:"start", badge:"p=50%", tag:"Instant", desc:"（未実装）" }
+      ]
+    }
+  ];
+
+  const paletteSectionsEl = document.getElementById("paletteSections");
+
+  const selectedPaletteKey = "HazardInRange";
+
+  function tagClass(tag){
+    const t = tag.toLowerCase();
+    if(t === 'yield') return 'yield';
+    if(t === 'running') return 'running';
+    return 'instant';
+  }
+
+  function makeTile(ch){
+    const div = document.createElement('div');
+    div.className = 'ctile' + (ch.key === selectedPaletteKey ? ' selected' : '');
+    div.title = ch.desc ? `${ch.key} — ${ch.desc}` : ch.key;
+
+    const icon = document.createElement('div');
+    icon.className = 'i';
+    icon.innerHTML = ICONS[ch.icon] || ICONS.nop;
+
+    const t = document.createElement('div');
+    t.className = 't';
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = ch.key;
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+
+    if(ch.badge && ch.badge !== ''){
+      const b = document.createElement('span');
+      b.className = 'badge' + (String(ch.badge).includes('?') ? ' req' : '');
+      b.textContent = ch.badge;
+      meta.appendChild(b);
+    }
+
+    const tag = document.createElement('span');
+    tag.className = `tag ${tagClass(ch.tag || 'Instant')}`;
+    tag.textContent = ch.tag || 'Instant';
+    meta.appendChild(tag);
+
+    t.appendChild(name);
+    t.appendChild(meta);
+
+    div.appendChild(icon);
+    div.appendChild(t);
+    return div;
+  }
+
+  function renderPalette(){
+    paletteSectionsEl.innerHTML = '';
+
+    PALETTE.forEach(sec => {
+      const d = document.createElement('details');
+      if(sec.open) d.setAttribute('open','');
+
+      const s = document.createElement('summary');
+      const left = document.createElement('div');
+      left.className = 'sum-left';
+      left.innerHTML = `<span class="caret"></span><span>${sec.title}</span>`;
+      const cnt = document.createElement('div');
+      cnt.className = 'count';
+      cnt.textContent = sec.chips.length;
+      s.appendChild(left);
+      s.appendChild(cnt);
+
+      const g = document.createElement('div');
+      g.className = 'tilegrid';
+      sec.chips.forEach(ch => g.appendChild(makeTile(ch)));
+
+      d.appendChild(s);
+      d.appendChild(g);
+      paletteSectionsEl.appendChild(d);
+    });
+  }
+
+  renderPalette();
+
+  // ---- Grid render (static) ----
+  const GRID = 12;
+  const gridEl = document.getElementById("grid");
+
+  const BIG_ICONS = {
+    start: svgWrapBig(`
+      <polygon points="12,8 26,16 12,24" fill="#f6e3c5"/>
+      <rect x="7" y="9" width="3" height="14" fill="#f0c04a"/>
+    `),
+    nop: svgWrapBig(`
+      <rect x="8" y="14" width="4" height="4" fill="#f6e3c5"/>
+      <rect x="14" y="14" width="4" height="4" fill="#f6e3c5"/>
+      <rect x="20" y="14" width="4" height="4" fill="#f6e3c5"/>
+    `),
+    hazard: svgWrapBig(`
+      <polygon points="16,6 27,26 5,26" fill="#f0c04a"/>
+      <rect x="15" y="12" width="2" height="8" fill="#2b1b0d"/>
+      <rect x="15" y="22" width="2" height="2" fill="#2b1b0d"/>
+    `),
+    enemy: svgWrapBig(`
+      <rect x="10" y="8" width="12" height="12" fill="#f6e3c5"/>
+      <rect x="12" y="12" width="3" height="3" fill="#2b1b0d"/>
+      <rect x="17" y="12" width="3" height="3" fill="#2b1b0d"/>
+      <rect x="13" y="20" width="6" height="4" fill="#f6e3c5"/>
+      <rect x="14" y="22" width="4" height="2" fill="#2b1b0d"/>
+    `),
+    chest: svgWrapBig(`
+      <rect x="8" y="12" width="16" height="12" fill="#f6e3c5"/>
+      <rect x="8" y="10" width="16" height="4" fill="#dba569"/>
+      <rect x="14" y="12" width="4" height="12" fill="#2b1b0d"/>
+      <rect x="15" y="16" width="2" height="3" fill="#f0c04a"/>
+    `),
+    exit: svgWrapBig(`
+      <rect x="9" y="20" width="14" height="4" fill="#f6e3c5"/>
+      <rect x="9" y="16" width="10" height="4" fill="#f6e3c5"/>
+      <rect x="9" y="12" width="6" height="4" fill="#f6e3c5"/>
+      <rect x="20" y="10" width="3" height="14" fill="#f0c04a"/>
+    `),
+    move: svgWrapBig(`
+      <rect x="10" y="9" width="10" height="10" fill="#f6e3c5"/>
+      <rect x="9" y="19" width="14" height="4" fill="#dba569"/>
+      <rect x="8" y="23" width="16" height="3" fill="#f6e3c5"/>
+      <rect x="22" y="9" width="2" height="14" fill="#f0c04a"/>
+    `),
+    evade: svgWrapBig(`
+      <rect x="7" y="18" width="18" height="4" fill="#f6e3c5"/>
+      <rect x="10" y="12" width="12" height="4" fill="#dba569"/>
+      <rect x="12" y="8" width="8" height="3" fill="#f6e3c5"/>
+      <rect x="24" y="12" width="2" height="10" fill="#f0c04a"/>
+    `),
+    wait: svgWrapBig(`
+      <rect x="12" y="7" width="8" height="4" fill="#f6e3c5"/>
+      <rect x="11" y="11" width="10" height="6" fill="#dba569"/>
+      <rect x="12" y="17" width="8" height="8" fill="#f6e3c5"/>
+      <rect x="14" y="13" width="4" height="2" fill="#2b1b0d"/>
+    `)
+  };
+
+  function svgWrapBig(paths){
+    return `<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">${paths}</svg>`;
+  }
+
+  const tri = (dir, color, offset, warn=false)=>({dir,color,offset,warn});
+
+  const chips = [
+    { r:0, c:0, kind:"start", icon:"start", sub:"START", arrows:[ tri("d","green") ] },
+    { r:1, c:0, kind:"nop", icon:"nop", sub:"", arrows:[ tri("d","green") ] },
+
+    { r:2, c:0, kind:"cond", icon:"hazard", sub:"R=2",
+      arrows:[ tri("r","red","off1"), tri("d","green","off2", true) ]
+    },
+    { r:2, c:1, kind:"act", icon:"evade", sub:"", arrows:[ tri("l","green") ] },
+
+    { r:3, c:0, kind:"cond", icon:"enemy", sub:"R=4",
+      arrows:[ tri("r","red","off1"), tri("d","green","off2") ]
+    },
+    { r:3, c:1, kind:"act", icon:"move", sub:"ATK", arrows:[ tri("l","green") ] },
+
+    { r:4, c:0, kind:"cond", icon:"chest", sub:"R=4",
+      arrows:[ tri("r","red","off1"), tri("d","green","off2") ]
+    },
+    { r:4, c:1, kind:"act", icon:"move", sub:"Chest", arrows:[ tri("l","green") ] },
+
+    { r:5, c:0, kind:"cond", icon:"exit", sub:"R=6", neg:true,
+      arrows:[ tri("r","red","off1"), tri("d","green","off2") ]
+    },
+    { r:5, c:1, kind:"act", icon:"move", sub:"Exit", arrows:[ tri("l","green") ] },
+
+    { r:6, c:0, kind:"act", icon:"wait", sub:"0.5s", arrows:[ tri("u","green") ] }
+  ];
+
+  const key = (r,c)=>`${r},${c}`;
+  const lookup = new Map(chips.map(x=>[key(x.r,x.c), x]));
+
+  const selectedCellKey = key(2,0); // HazardInRange
+
+  // Range highlight (Manhattan radius)
+  const R = 2;
+  const inRange = new Set();
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      const d = Math.abs(r-2) + Math.abs(c-0);
+      if(d<=R) inRange.add(key(r,c));
+    }
+  }
+
+  const destTrue = key(2,1);
+  const destFalse = key(3,0); // In this mock, false would go to (3,0) but we flag the arrow as warn=true to show caution concept
+
+  // Render
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+
+      if(inRange.has(key(r,c))) cell.classList.add('inrange');
+      if(key(r,c)===selectedCellKey) cell.classList.add('selected');
+      if(key(r,c)===destTrue) cell.classList.add('dest-true');
+      if(key(r,c)===destFalse) cell.classList.add('dest-false');
+
+      const item = lookup.get(key(r,c));
+      if(!item){
+        cell.classList.add("empty");
+        if((r+c)%9===0){
+          const ghost = document.createElement("div");
+          ghost.className = "ghost";
+          ghost.textContent = "—";
+          cell.appendChild(ghost);
+        }
+      }else{
+        const chip = document.createElement("div");
+        chip.className = "chip bevel";
+        if(item.kind === 'start') chip.classList.add('startchip');
+
+        const icon = document.createElement("div");
+        icon.className = "ico-big";
+        icon.innerHTML = BIG_ICONS[item.icon] || BIG_ICONS.nop;
+        chip.appendChild(icon);
+
+        if(item.sub){
+          const sub = document.createElement("div");
+          sub.className = "sub";
+          sub.textContent = item.sub;
+          chip.appendChild(sub);
+        }
+        if(item.neg){
+          const badge = document.createElement("div");
+          badge.className = "badge";
+          badge.textContent = "!";
+          chip.appendChild(badge);
+        }
+
+        cell.appendChild(chip);
+
+        if(item.arrows){
+          item.arrows.forEach(a=>{
+            cell.appendChild(makeTri(a.dir, a.color, a.offset));
+            if(a.warn){
+              cell.appendChild(makeWarn(a.dir));
+            }
+          });
+        }
+      }
+
+      gridEl.appendChild(cell);
+    }
+  }
+
+  function makeTri(dir, color, offset){
+    const t = document.createElement("div");
+    t.className = `tri ${dir} ${color} ${offset||""}`.trim();
+    return t;
+  }
+  function makeWarn(dir){
+    const w = document.createElement('div');
+    w.className = `warn ${dir}`;
+    w.textContent = '⚠';
+    return w;
+  }
+</script>
+</body>
+</html>
