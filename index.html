@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Golem AI Dungeon MVP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+JP:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="title">Golem AI Dungeon MVP</div>
+          <div class="subtitle">6x6 AIチップで自動攻略（単一フロア）</div>
+        </div>
+        <div class="controls">
+          <button id="start-btn">Start</button>
+          <button id="pause-btn">Pause</button>
+          <button id="reset-btn">Reset</button>
+          <div class="audio-controls">
+            <label class="audio-toggle"><input id="bgm-toggle" type="checkbox" checked />BGM</label>
+            <input id="bgm-volume" type="range" min="0" max="1" step="0.01" value="0.35" />
+            <label class="audio-toggle"><input id="sfx-toggle" type="checkbox" checked />SFX</label>
+            <input id="sfx-volume" type="range" min="0" max="1" step="0.01" value="0.6" />
+          </div>
+          <div id="status" class="status"></div>
+        </div>
+      </header>
+      <main class="tabs-layout">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="editor">AIエディタ</button>
+          <button class="tab-btn" data-tab="game">ダンジョン</button>
+        </div>
+        <section id="tab-editor" class="panel tab-panel active">
+          <div class="panel-header">
+            <h2>AIエディタ</h2>
+            <div class="panel-note">矢印先が空/盤外ならSTARTへ戻る</div>
+          </div>
+          <div id="grid" class="grid"></div>
+          <div class="editor-tools">
+            <div class="tool-block">
+              <div class="tool-title">チップ</div>
+              <div id="palette" class="palette"></div>
+            </div>
+            <div class="tool-block">
+              <div class="tool-title">矢印</div>
+              <div class="arrow-mode">
+                <button class="arrow-mode-btn" data-mode="true">True</button>
+                <button class="arrow-mode-btn" data-mode="false">False</button>
+              </div>
+              <div class="arrow-pad">
+                <button class="arrow-btn" data-dir="up">↑</button>
+                <div class="arrow-row">
+                  <button class="arrow-btn" data-dir="left">←</button>
+                  <button class="arrow-btn" data-dir="right">→</button>
+                </div>
+                <button class="arrow-btn" data-dir="down">↓</button>
+              </div>
+              <button id="negate-btn" class="negate-btn">条件チップを否定 (!) </button>
+            </div>
+          </div>
+          <div class="help">
+            <div>操作: チップ選択 → グリッドに配置</div>
+            <div>Space: Start/Pause | F: Fullscreen</div>
+          </div>
+        </section>
+        <section id="tab-game" class="panel tab-panel">
+          <div class="panel-header">
+            <h2>ダンジョン</h2>
+            <div class="panel-note">敵撃破で出口出現</div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="game-canvas" width="1280" height="768"></canvas>
+            <div id="overlay" class="overlay hidden">
+              <div id="branch-panel" class="overlay-card hidden">
+                <div class="overlay-title">次のフロアを選択</div>
+                <div id="branch-options" class="branch-options"></div>
+              </div>
+              <div id="gameover-panel" class="overlay-card hidden">
+                <div class="overlay-title">Game Over</div>
+                <div class="overlay-sub">Resetで再開</div>
+              </div>
+            </div>
+          </div>
+          <div id="hud" class="hud"></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
