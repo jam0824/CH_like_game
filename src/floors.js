@@ -4,7 +4,10 @@ export const FLOOR_CONFIGS = [
     name: 'F1: Ruins',
     depth: 1,
     spawn: { x: 2, y: 6 },
-    enemy: { x: 14, y: 6, hp: 30, speed: 2.2, aggroRange: 7.5, attackRange: 1.2, attackDamage: 8, attackCooldown: 1.4 },
+    enemies: [
+      { x: 14, y: 6, hp: 30, speed: 2.2, aggroRange: 7.5, attackRange: 1.2, attackDamage: 8, attackCooldown: 1.4 },
+      { x: 16, y: 3, hp: 26, speed: 2.1, aggroRange: 6.5, attackRange: 1.1, attackDamage: 7, attackCooldown: 1.6 },
+    ],
     traps: [
       { x: 8, y: 4, damage: 15 },
       { x: 12, y: 8, damage: 15 },
@@ -23,7 +26,11 @@ export const FLOOR_CONFIGS = [
     name: 'F2A: Battle',
     depth: 2,
     spawn: { x: 2, y: 3 },
-    enemy: { x: 15, y: 8, hp: 45, speed: 2.6, aggroRange: 8.5, attackRange: 1.3, attackDamage: 10, attackCooldown: 1.2 },
+    enemies: [
+      { x: 15, y: 8, hp: 45, speed: 2.6, aggroRange: 8.5, attackRange: 1.3, attackDamage: 10, attackCooldown: 1.2 },
+      { x: 17, y: 5, hp: 32, speed: 2.4, aggroRange: 7.0, attackRange: 1.2, attackDamage: 9, attackCooldown: 1.4 },
+      { x: 12, y: 9, hp: 28, speed: 2.3, aggroRange: 6.5, attackRange: 1.1, attackDamage: 8, attackCooldown: 1.6 },
+    ],
     traps: [
       { x: 7, y: 3, damage: 18 },
       { x: 10, y: 6, damage: 18 },
@@ -39,7 +46,10 @@ export const FLOOR_CONFIGS = [
     name: 'F2B: Treasure',
     depth: 2,
     spawn: { x: 2, y: 8 },
-    enemy: { x: 14, y: 4, hp: 38, speed: 2.4, aggroRange: 8.0, attackRange: 1.3, attackDamage: 9, attackCooldown: 1.3 },
+    enemies: [
+      { x: 14, y: 4, hp: 38, speed: 2.4, aggroRange: 8.0, attackRange: 1.3, attackDamage: 9, attackCooldown: 1.3 },
+      { x: 16, y: 7, hp: 30, speed: 2.2, aggroRange: 6.8, attackRange: 1.2, attackDamage: 8, attackCooldown: 1.5 },
+    ],
     traps: [
       { x: 9, y: 7, damage: 16 },
     ],

@@ -2,7 +2,7 @@ import { MAP_HEIGHT, MAP_WIDTH, TILE_SIZE, FIXED_DT, AI_TICK } from './config.js
 import { assets, loadAssets } from './assets.js';
 import { createDefaultGrid, createInitialState, resetRun, loadFloor, serializeState, onModeChange } from './state.js';
 import { runAI, applyAction } from './ai.js';
-import { updateEnemy } from './enemy.js';
+import { updateEnemies } from './enemy.js';
 import { renderGame } from './render.js';
 import { createUI } from './ui.js';
 import { playSfx, ensureAudio } from './audio.js';
@@ -33,12 +33,14 @@ function startRun() {
   resetRun(state);
   onModeChange(state, 'running', ui.updateStatus, ui.updateOverlay);
   ensureAudio();
+  ui.switchTab('test');
 }
 
 function resetAll() {
   resetRun(state);
   onModeChange(state, 'idle', ui.updateStatus, ui.updateOverlay);
   ui.updateGridUI();
+  ui.switchTab('editor');
 }
 
 function togglePause() {
@@ -49,6 +51,7 @@ function togglePause() {
   } else if (state.mode === 'idle') {
     startRun();
   }
+  ui.switchTab('test');
 }
 
 function chooseBranch(id) {
@@ -79,10 +82,14 @@ function update(dt) {
       if (state.ai.currentAction) break;
     }
   }
-  const playerDead = updateEnemy(state, dt);
+  const playerDead = updateEnemies(state, dt);
   if (playerDead) {
     onModeChange(state, 'gameover', ui.updateStatus, ui.updateOverlay);
     return;
+  }
+  if (!state.exit.active && state.enemies.length && state.enemies.every((enemy) => !enemy.alive)) {
+    state.exit.active = true;
+    playSfx('exit');
   }
   if (state.exit.active) {
     const exitDist = Math.hypot(state.player.x - state.exit.x, state.player.y - state.exit.y);

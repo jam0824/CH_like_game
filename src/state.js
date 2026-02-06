@@ -1,13 +1,24 @@
-import { AI_TICK, GRID_SIZE, MAX_STEPS } from './config.js';
+import { AI_TICK, GRID_SIZE, MAX_STEPS, CHIP_DEFS } from './config.js';
 import { FLOOR_CONFIGS, getFloorConfig, TOTAL_DEPTH } from './floors.js';
 import { playSfx, syncAudioToMode } from './audio.js';
 
+function cloneParams(def) {
+  const params = {};
+  if (!def?.params) return params;
+  Object.entries(def.params).forEach(([key, meta]) => {
+    params[key] = meta.default;
+  });
+  return params;
+}
+
 export function createCell(type = 'empty') {
+  const def = CHIP_DEFS[type];
   return {
     type,
     trueDir: null,
     falseDir: null,
     negate: false,
+    params: cloneParams(def),
   };
 }
 
@@ -16,27 +27,48 @@ export function createDefaultGrid() {
     Array.from({ length: GRID_SIZE }, () => createCell())
   );
   g[0][0] = createCell('start');
-  g[0][0].trueDir = 'right';
+  g[0][0].trueDir = 'down';
 
-  g[0][1] = createCell('enemy_exists');
-  g[0][1].trueDir = 'right';
-  g[0][1].falseDir = 'down';
+  g[1][0] = createCell('nop');
+  g[1][0].trueDir = 'down';
 
-  g[0][2] = createCell('move_to_enemy');
-  g[0][2].trueDir = 'right';
+  g[2][0] = createCell('hazard_in_range');
+  g[2][0].trueDir = 'right';
+  g[2][0].falseDir = 'down';
 
-  g[0][3] = createCell('attack');
-  g[0][3].trueDir = 'up';
+  g[2][1] = createCell('evade_hazard');
+  g[2][1].trueDir = 'left';
 
-  g[1][1] = createCell('treasure_exists');
-  g[1][1].trueDir = 'right';
-  g[1][1].falseDir = 'down';
+  g[3][0] = createCell('enemy_exists');
+  g[3][0].trueDir = 'right';
+  g[3][0].falseDir = 'down';
+  g[3][0].params.r = 12;
 
-  g[1][2] = createCell('move_to_treasure');
-  g[1][2].trueDir = 'left';
+  g[3][1] = createCell('move_to_enemy');
+  g[3][1].trueDir = 'right';
 
-  g[2][1] = createCell('move_to_exit');
-  g[2][1].trueDir = 'down';
+  g[3][2] = createCell('attack');
+  g[3][2].trueDir = 'left';
+
+  g[4][0] = createCell('treasure_exists');
+  g[4][0].trueDir = 'right';
+  g[4][0].falseDir = 'down';
+  g[4][0].params.r = 7;
+
+  g[4][1] = createCell('move_to_treasure');
+  g[4][1].trueDir = 'left';
+
+  g[5][0] = createCell('exit_exists');
+  g[5][0].trueDir = 'right';
+  g[5][0].falseDir = 'down';
+  g[5][0].params.r = 30;
+
+  g[5][1] = createCell('move_to_exit');
+  g[5][1].trueDir = 'left';
+
+  g[6][0] = createCell('wait');
+  g[6][0].trueDir = 'up';
+
   return g;
 }
 
@@ -50,7 +82,7 @@ export function createInitialState() {
     floorName: FLOOR_CONFIGS[0]?.name || 'F1',
     branchOptions: [],
     player: null,
-    enemy: null,
+    enemies: [],
     exit: null,
     traps: [],
     treasures: [],
@@ -59,6 +91,11 @@ export function createInitialState() {
       tickTimer: 0,
       currentAction: null,
       stepCounter: 0,
+      intent: null,
+      prevPos: null,
+      pendingAdvance: null,
+      invalidStart: false,
+      startPos: { x: 0, y: 0 },
     },
   };
 }
@@ -68,6 +105,7 @@ export function resetRun(state) {
     x: 2,
     y: 6,
     hp: 100,
+    maxHp: 100,
     speed: 3.0,
     radius: 0.35,
     attackRange: 1.2,
@@ -80,6 +118,10 @@ export function resetRun(state) {
   state.ai.pc = { x: 0, y: 0 };
   state.ai.tickTimer = 0;
   state.ai.currentAction = null;
+  state.ai.stepCounter = 0;
+  state.ai.intent = null;
+  state.ai.prevPos = null;
+  state.ai.pendingAdvance = null;
   loadFloor(state, 0);
 }
 
@@ -93,20 +135,25 @@ export function loadFloor(state, index) {
   state.branchOptions = [];
   state.player.x = config.spawn.x;
   state.player.y = config.spawn.y;
-  state.enemy = {
-    x: config.enemy.x,
-    y: config.enemy.y,
-    hp: config.enemy.hp,
+  const enemies = config.enemies || (config.enemy ? [config.enemy] : []);
+  state.enemies = enemies.map((enemy, idx) => ({
+    id: idx + 1,
+    x: enemy.x,
+    y: enemy.y,
+    hp: enemy.hp,
+    maxHp: enemy.hp,
     radius: 0.4,
     alive: true,
-    speed: config.enemy.speed,
-    aggroRange: config.enemy.aggroRange,
-    attackRange: config.enemy.attackRange,
-    attackDamage: config.enemy.attackDamage,
-    attackCooldown: config.enemy.attackCooldown,
+    speed: enemy.speed,
+    aggroRange: enemy.aggroRange,
+    attackRange: enemy.attackRange,
+    attackDamage: enemy.attackDamage,
+    attackCooldown: enemy.attackCooldown,
     cooldownLeft: 0,
     state: 'idle',
-  };
+    wanderTimer: 0,
+    wanderTarget: null,
+  }));
   state.exit = {
     x: config.exit.x,
     y: config.exit.y,
@@ -127,21 +174,25 @@ export function loadFloor(state, index) {
   state.ai.pc = { x: 0, y: 0 };
   state.ai.tickTimer = 0;
   state.ai.currentAction = null;
+  state.ai.stepCounter = 0;
+  state.ai.intent = null;
+  state.ai.prevPos = null;
+  state.ai.pendingAdvance = null;
   state.exit.active = false;
 }
 
-export function resolveNextCell(grid, x, y, dir, dirs) {
+export function resolveNextCell(grid, x, y, dir, dirs, startPos = { x: 0, y: 0 }) {
   if (!dir || !dirs[dir]) {
-    return { x: 0, y: 0 };
+    return { ...startPos };
   }
   const nx = x + dirs[dir].x;
   const ny = y + dirs[dir].y;
   if (nx < 0 || ny < 0 || nx >= GRID_SIZE || ny >= GRID_SIZE) {
-    return { x: 0, y: 0 };
+    return { ...startPos };
   }
   const nextCell = grid[ny][nx];
   if (!nextCell || nextCell.type === 'empty') {
-    return { x: 0, y: 0 };
+    return { ...startPos };
   }
   return { x: nx, y: ny };
 }
@@ -156,9 +207,12 @@ export function serializeState(state) {
     note: 'origin top-left, +x right, +y down, units=tiles',
     pc: { x: state.ai.pc.x, y: state.ai.pc.y },
     player: { x: round2(state.player.x), y: round2(state.player.y), hp: state.player.hp },
-    enemy: state.enemy.alive
-      ? { x: round2(state.enemy.x), y: round2(state.enemy.y), hp: state.enemy.hp }
-      : null,
+    enemies: state.enemies.filter((enemy) => enemy.alive).map((enemy) => ({
+      id: enemy.id,
+      x: round2(enemy.x),
+      y: round2(enemy.y),
+      hp: enemy.hp,
+    })),
     exit: state.exit.active ? { x: state.exit.x, y: state.exit.y } : null,
     floor: state.floorDepth,
     totalFloors: state.totalDepth,
@@ -167,12 +221,15 @@ export function serializeState(state) {
     treasures: state.treasures.filter((treasure) => !treasure.opened).map((treasure) => ({ x: treasure.x, y: treasure.y })),
     gold: state.player.gold,
     branchOptions: state.mode === 'branch' ? state.branchOptions : [],
-    enemyState: state.enemy.alive
-      ? { state: state.enemy.state, cooldown: round2(state.enemy.cooldownLeft) }
-      : null,
+    enemyState: state.enemies.filter((enemy) => enemy.alive).map((enemy) => ({
+      id: enemy.id,
+      state: enemy.state,
+      cooldown: round2(enemy.cooldownLeft),
+    })),
     action: state.ai.currentAction
       ? { type: state.ai.currentAction.type, remaining: round2(state.ai.currentAction.remaining) }
       : null,
+    stepCounter: state.ai.stepCounter,
   };
 }
 

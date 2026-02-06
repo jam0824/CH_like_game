@@ -11,6 +11,10 @@ function drawSprite(ctx, img, x, y, size) {
   }
 }
 
+function drawSpriteScaled(ctx, img, x, y, size, scale) {
+  drawSprite(ctx, img, x, y, size * scale);
+}
+
 export function renderGame(ctx, canvas, assets, state) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (assets.floor && assets.floor.complete) {
@@ -25,28 +29,29 @@ export function renderGame(ctx, canvas, assets, state) {
   }
 
   if (state.exit.active) {
-    drawSprite(ctx, assets.exit, state.exit.x, state.exit.y, TILE_SIZE);
+    drawSpriteScaled(ctx, assets.exit, state.exit.x, state.exit.y, TILE_SIZE, 0.6);
   }
   state.traps.forEach((trap) => {
     if (!trap.active) return;
     if (assets.trap) {
-      drawSprite(ctx, assets.trap, trap.x, trap.y, TILE_SIZE);
+      drawSpriteScaled(ctx, assets.trap, trap.x, trap.y, TILE_SIZE, 0.5);
     } else {
       ctx.fillStyle = '#d9534f';
-      ctx.fillRect(trap.x * TILE_SIZE - 10, trap.y * TILE_SIZE - 10, 20, 20);
+      ctx.fillRect(trap.x * TILE_SIZE - 12, trap.y * TILE_SIZE - 12, 24, 24);
     }
   });
   state.treasures.forEach((treasure) => {
     if (treasure.opened) return;
     if (assets.treasure) {
-      drawSprite(ctx, assets.treasure, treasure.x, treasure.y, TILE_SIZE);
+      drawSpriteScaled(ctx, assets.treasure, treasure.x, treasure.y, TILE_SIZE, 0.6);
     } else {
       ctx.fillStyle = '#f0c419';
-      ctx.fillRect(treasure.x * TILE_SIZE - 10, treasure.y * TILE_SIZE - 10, 20, 20);
+      ctx.fillRect(treasure.x * TILE_SIZE - 12, treasure.y * TILE_SIZE - 12, 24, 24);
     }
   });
-  if (state.enemy.alive) {
-    drawSprite(ctx, assets.enemy, state.enemy.x, state.enemy.y, TILE_SIZE);
-  }
+  state.enemies.forEach((enemy) => {
+    if (!enemy.alive) return;
+    drawSprite(ctx, assets.enemy, enemy.x, enemy.y, TILE_SIZE);
+  });
   drawSprite(ctx, assets.player, state.player.x, state.player.y, TILE_SIZE);
 }

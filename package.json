@@ -4,6 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
+    "sync:assets": "bash ./scripts/sync_assets_from_scripts.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

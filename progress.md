@@ -25,3 +25,43 @@ Original prompt: specフォルダの仕様書を確認し、動作が確認で�
 - Updated asset generation prompts to fully refresh fantasy/ruins look; asset regen still failing due to network/DNS.
 - Removed old root main.js after module split.
 - Copied/resized available output/imagegen assets into assets/ via sips (floor, exit, player, enemy, core chips). Missing trap/treasure + treasure chips still not found in output/imagegen.
+- Implemented v11 wood mock UI: new index.html layout (left palette / grid / right inspector / bottom bar), wood CSS theme, and tab mapping (編集=AI, テスト=ダンジョン).
+- Updated config to GRID_SIZE=12, MAX_STEPS=36, added CHIP_DEFS + PALETTE_SECTIONS with starter defaults + params/presets.
+- Reworked AI state: cells now carry params; default grid is 12x12 with Hazard→Evade→Enemy→Attack→Treasure→Exit loop; added intent/stepCounter fields.
+- Updated AI logic: R-based sensors, SelfHP, Hazard checks, EvadeHazard move, Wait/Attack running, and START validation.
+- Rebuilt UI logic: SVG chip icons, palette sections, inspector + param editor, arrow pads, warnings/reachable, undo/redo, and keyboard shortcuts.
+- Ran Playwright client via local http.server; captured /output/web-game/shot-0.png and state-0.json (mode paused in test run).
+- Asset gaps remain (404): assets/tiles/trap.png, assets/tiles/treasure.png, assets/chips/treasure_exists.png, assets/chips/move_to_treasure.png still missing.
+- Ran Playwright again with empty actions to capture initial editor view; new screenshot/state in output/web-game and same missing asset 404s.
+- Added multi-enemy support (floors now use enemies[]), wandering/chase AI per enemy, and exit unlock when all enemies defeated.
+- AI sensors now target nearest enemy; attack targets enemy by id.
+- AI editor chip icons now prefer assets/chips images when available (fallback to SVG).
+- Playwright run on port 5174 captured updated gameplay with multiple enemies; state-0.json shows two enemies wandering.
+- Fixed test-run visibility: Start/Pause/Run pill now auto-switch to Test tab, Reset returns to Editor; should prevent "no characters" confusion.
+- Adjusted render sizes for trap/treasure to be more visible (if assets missing fallback still visible).
+- Re-ran Playwright on port 5178; gameplay shows player/enemies in Test view.
+- Made palette column responsive (clamp-based widths) and enabled scroll in left/right panels.
+- Switched chip placement to double-click on grid; single click now only selects.
+- Updated hint text accordingly.
+- Fixed AI move-stall issue by redefining R as dungeon-tile range (not editor-grid range).
+- Added MAX_DUNGEON_RANGE in config and switched R sliders max for enemy/treasure/exit/hazard sensors.
+- Updated AI sensor evaluation to use tile-normalized Manhattan distance via toTile() for enemy_exists/treasure_exists/exit_exists/hazard_on_self/hazard_in_range.
+- Tuned default starter grid sensor params to ensure startup movement path: enemy_exists.r=12, treasure_exists.r=7, exit_exists.r=30.
+- Playwright verification run (240 frames after #start-btn): player moved from (2,6) to (11.93,3.46); action not stuck on wait; screenshot updated at output/web-game/shot-0.png.
+- Known non-blocking issue remains: missing asset 404 for trap/treasure/chip icons.
+- Updated UI chip badges/subtext to show `R(ダンジョン)=...` for distance sensors to match new distance semantics.
+- Added scripts/sync_assets_from_scripts.sh and npm script `sync:assets` to sync missing assets from scripts/assets to assets.
+- Synced assets and resolved missing files in ASSET_PATHS (trap/treasure tiles and treasure chip icons now present).
+- Updated README with asset sync command and editor controls: triangle click rotate, Shift reverse rotate, Alt sync True/False.
+- Updated editor hint text in index.html to clarify placement rules (NOP single click, non-NOP double click) and arrow edit shortcuts.
+- Implemented spec 8.9.1 arrow editing in ui.js:
+  - grid triangle click rotates arrow direction cyclically
+  - Shift+click rotates reverse
+  - Alt+click on conditional chip syncs True/False to clicked direction
+  - triangles carry data-mode/data-dir and are clickable
+- Restored placement rule compliance in ui.js:
+  - NOP places on single click while stamping
+  - non-NOP places on double click
+  - single click for non-NOP remains selection-only
+- Playwright run on :5181 verified gameplay progression and no asset 404 in server log.
+- Manual/DOM automation checks verified triangle rotate/Shift reverse/Alt sync and placement rules (NOP single, non-NOP double).
