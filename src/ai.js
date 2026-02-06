@@ -82,6 +82,13 @@ function computeSnapshot(state) {
   const playerPos = { x: state.player.x, y: state.player.y };
   const playerTile = toTile(playerPos);
   const traps = state.traps.filter((trap) => trap.active).map((trap) => ({ x: trap.x, y: trap.y }));
+  const dynamicHazards = (state.hazards || [])
+    .filter((hazard) => hazard.phase === 'telegraph' || hazard.phase === 'active')
+    .map((hazard) => ({
+      x: hazard.x ?? (hazard.x1 + hazard.x2) * 0.5,
+      y: hazard.y ?? (hazard.y1 + hazard.y2) * 0.5,
+    }));
+  const hazards = traps.concat(dynamicHazards);
   const treasures = state.treasures.filter((treasure) => !treasure.opened).map((treasure) => ({ x: treasure.x, y: treasure.y }));
   const enemies = state.enemies.filter((enemy) => enemy.alive).map((enemy) => ({
     id: enemy.id,
@@ -95,6 +102,7 @@ function computeSnapshot(state) {
     exitActive: state.exit.active,
     exitPos: { x: state.exit.x, y: state.exit.y },
     traps,
+    hazards,
     treasures,
   };
 }
@@ -117,8 +125,8 @@ function chooseEvadeTarget(state, snapshot) {
       y: clamp(origin.y + dy, 0.5, state.mapHeight - 0.5),
     };
     const candidateTile = { x: Math.round(candidate.x), y: Math.round(candidate.y) };
-    const hazard = snapshot.traps.some((trap) => inRange(candidateTile, trap, 0));
-    const nearestHazard = findNearest(snapshot.traps, candidateTile);
+    const hazard = snapshot.hazards.some((trap) => inRange(candidateTile, trap, 0));
+    const nearestHazard = findNearest(snapshot.hazards, candidateTile);
     const hazardDist = nearestHazard ? nearestHazard.dist : GRID_SIZE;
     let score = 0;
     if (!hazard) score += 100;
@@ -206,7 +214,7 @@ export function runAI(state, grid) {
     }
 
     if (cell.type === 'hazard_on_self') {
-      const onHazard = snapshot.traps.some((trap) => inRange(snapshot.playerTile, trap, 0));
+      const onHazard = snapshot.hazards.some((trap) => inRange(snapshot.playerTile, trap, 0));
       const cond = cell.negate ? !onHazard : onHazard;
       const dir = cond ? cell.trueDir : cell.falseDir;
       state.ai.pc = resolveNextCell(grid, x, y, dir, DIRS, startPos);
@@ -215,7 +223,7 @@ export function runAI(state, grid) {
 
     if (cell.type === 'hazard_in_range') {
       const range = cell.params?.r ?? CHIP_DEFS.hazard_in_range.params.r.default;
-      const hazard = snapshot.traps.some((trap) => inRange(snapshot.playerTile, trap, range));
+      const hazard = snapshot.hazards.some((trap) => inRange(snapshot.playerTile, trap, range));
       const cond = cell.negate ? !hazard : hazard;
       const dir = cond ? cell.trueDir : cell.falseDir;
       state.ai.pc = resolveNextCell(grid, x, y, dir, DIRS, startPos);
@@ -236,7 +244,7 @@ export function runAI(state, grid) {
     if (cell.type === 'move_to_enemy') {
       const nearest = findNearestEnemy(snapshot, snapshot.playerTile);
       if (!nearest) {
-        state.ai.pc = resolveNextCell(grid, x, y, cell.trueDir, DIRS, startPos);
+        state.ai.pc = { ...startPos };
         continue;
       }
       state.ai.intent = { x: nearest.tile.x, y: nearest.tile.y };
@@ -310,12 +318,12 @@ export function runAI(state, grid) {
     if (cell.type === 'attack') {
       const nearest = findNearestEnemy(snapshot, snapshot.playerTile);
       if (!nearest) {
-        state.ai.pc = resolveNextCell(grid, x, y, cell.trueDir, DIRS, startPos);
+        state.ai.pc = { ...startPos };
         continue;
       }
       const dist = Math.hypot(state.player.x - nearest.enemy.x, state.player.y - nearest.enemy.y);
       if (dist > state.player.attackRange) {
-        state.ai.pc = resolveNextCell(grid, x, y, cell.trueDir, DIRS, startPos);
+        state.ai.pc = { ...startPos };
         continue;
       }
       playSfx('attack');
@@ -331,6 +339,8 @@ export function runAI(state, grid) {
 
     state.ai.pc = { ...startPos };
   }
+  // Prevent permanent PC loops in condition-only subgraphs.
+  state.ai.pc = { ...startPos };
   finish();
 }
 

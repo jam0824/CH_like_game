@@ -413,7 +413,7 @@
     }
 
     .grid{
-      --cell: 56px;
+      --cell: 72px;
       --gap: 12px; /* 矢印のために隙間を大きめ */
       height:100%;
       display:grid;
@@ -466,8 +466,9 @@
         inset 0 0 0 2px rgba(255,255,255,.05),
         0 5px 0 rgba(0,0,0,.22);
       display:flex;
-      align-items:center;
-      justify-content:center;
+      align-items:flex-start;
+      justify-content:flex-start;
+      padding:6px;
       text-shadow: 2px 2px 0 rgba(0,0,0,.55);
       overflow:hidden;
     }
@@ -489,7 +490,7 @@
     }
     .chip .badge{
       position:absolute;
-      top:6px; left:6px;
+      top:6px; right:6px;
       width:18px; height:18px;
       display:grid;
       place-items:center;
@@ -503,7 +504,7 @@
     }
 
     .ico-big{
-      width:30px; height:30px;
+      width:40px; height:40px;
       filter: drop-shadow(2px 2px 0 rgba(0,0,0,.55));
     }
     svg{ shape-rendering: crispEdges; }
@@ -649,6 +650,28 @@
 
     .rpanel{ border-radius: 14px; background: rgba(255,255,255,.14); border:2px solid rgba(0,0,0,.20); padding:10px; }
     .rpanel h3{ margin:0 0 10px; font-size:13px; font-weight:1000; }
+
+    .chip-focus{
+      padding:8px 10px;
+      border-radius: 10px;
+      border:2px solid rgba(0,0,0,.20);
+      background: rgba(0,0,0,.12);
+      margin-bottom:10px;
+    }
+    .chip-focus-name{
+      font-size: 30px;
+      line-height:1.0;
+      font-weight:1000;
+      color:#f6e3c5;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+    }
+    .chip-focus-desc{
+      margin-top:4px;
+      font-size:12px;
+      font-weight:800;
+      line-height:1.35;
+      color: rgba(246,227,197,.92);
+    }
 
     .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
     .mini{
@@ -852,8 +875,12 @@
           <!-- Inspector panel -->
           <section class="rpanel" aria-label="Inspector panel">
             <h3>選択中チップ</h3>
+            <div class="chip-focus">
+              <div class="chip-focus-name">HazardInRange</div>
+              <div class="chip-focus-desc">R以内に危険が存在する</div>
+            </div>
             <div class="row">
-              <div class="mini">条件：HazardInRange</div>
+              <div class="mini">種別：条件（hazard_in_range）</div>
               <div class="mini">座標：C1（例）</div>
             </div>
 
@@ -1254,7 +1281,7 @@
   };
 
   function svgWrapBig(paths){
-    return `<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">${paths}</svg>`;
+    return `<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true">${paths}</svg>`;
   }
 
   const tri = (dir, color, offset, warn=false)=>({dir,color,offset,warn});

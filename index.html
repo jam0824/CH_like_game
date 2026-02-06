@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AIエディタ v11</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -83,6 +84,15 @@
                   <div class="overlay-title">次のフロアを選択</div>
                   <div id="branch-options" class="branch-options"></div>
                 </div>
+                <div id="reward-panel" class="overlay-card hidden">
+                  <div class="overlay-title">報酬を1つ選択</div>
+                  <div id="reward-options" class="reward-options"></div>
+                </div>
+                <div id="intermission-panel" class="overlay-card hidden">
+                  <div class="overlay-title">インターミッション</div>
+                  <div id="intermission-info" class="overlay-sub">回復中...</div>
+                  <button id="intermission-next-btn" class="branch-option">次のフロアへ</button>
+                </div>
                 <div id="gameover-panel" class="overlay-card hidden">
                   <div class="overlay-title">Game Over</div>
                   <div class="overlay-sub">Resetで再開</div>
@@ -105,8 +115,12 @@
             <div class="rgroup active" data-rtab="inspector">
               <section class="rpanel" aria-label="Inspector panel">
                 <h3>選択中チップ</h3>
+                <div class="chip-focus">
+                  <div class="chip-focus-name" id="inspector-chip-name">-</div>
+                  <div class="chip-focus-desc" id="inspector-chip-desc">セルを選択するとチップ名を表示します。</div>
+                </div>
                 <div class="row">
-                  <div class="mini" id="inspector-chip">条件：-</div>
+                  <div class="mini" id="inspector-chip">種別：-</div>
                   <div class="mini" id="inspector-pos">座標：-</div>
                 </div>
 
@@ -133,10 +147,10 @@
               </section>
 
               <section class="rpanel" aria-label="Arrow settings">
-                <h3>矢印設定（True / False）</h3>
+                <h3 id="arrow-settings-title">矢印設定</h3>
                 <div class="arrowpads">
-                  <div>
-                    <div class="mini red">True</div>
+                  <div id="arrow-group-true" class="arrow-group">
+                    <div id="arrow-label-true" class="mini red">True</div>
                     <div class="arrowpad" data-mode="true">
                       <button class="k empty"></button>
                       <button class="k" data-dir="up">↑</button>
@@ -149,7 +163,7 @@
                       <button class="k empty"></button>
                     </div>
                   </div>
-                  <div>
+                  <div id="arrow-group-false" class="arrow-group">
                     <div class="mini green">False</div>
                     <div class="arrowpad" data-mode="false">
                       <button class="k empty"></button>

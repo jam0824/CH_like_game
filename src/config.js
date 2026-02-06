@@ -6,10 +6,66 @@ export const TILE_SIZE = 64;
 export const FIXED_DT = 1 / 60;
 export const AI_TICK = 0.1;
 export const MAX_STEPS = 36;
+export const MAX_DEPTH = 20;
+export const BOSS_INTERVAL = 5;
+export const INTERMISSION_HEAL_BASE = 0.35;
 
 export const R_PRESETS = [1, 2, 3, 4, 6, 8, 'max'];
 export const TIME_PRESETS = [0.1, 0.3, 0.5, 1.0, 2.0, 3.0, 5.0];
 export const PCT_PRESETS = [20, 30, 50, 70];
+
+export const RUN_BUFF_DEFS = {
+  heal: {
+    type: 'heal',
+    label: '緊急修復',
+    desc: 'HPを25回復',
+    amount: 25,
+  },
+  attack: {
+    type: 'attack',
+    label: '強打回路',
+    desc: '攻撃力 +1（ラン中）',
+    amount: 1,
+  },
+  speed: {
+    type: 'speed',
+    label: '機動制御',
+    desc: '移動速度 +5%（ラン中）',
+    amount: 0.05,
+  },
+};
+
+export const STAR_WEIGHT_TABLE = [
+  { minDepth: 1, maxDepth: 3, weights: { 1: 50, 2: 35, 3: 15 } },
+  { minDepth: 6, maxDepth: 8, weights: { 1: 15, 2: 45, 3: 30, 4: 10 } },
+  { minDepth: 11, maxDepth: 13, weights: { 2: 35, 3: 35, 4: 20, 5: 10 } },
+  { minDepth: 16, maxDepth: 18, weights: { 2: 15, 3: 35, 4: 30, 5: 20 } },
+];
+
+export const TYPE_WEIGHT_TABLE = [
+  { minDepth: 1, maxDepth: 3, weights: { combat: 55, chest: 25, trap: 20, elite: 0 } },
+  { minDepth: 6, maxDepth: 8, weights: { combat: 45, chest: 25, trap: 20, elite: 10 } },
+  { minDepth: 11, maxDepth: 13, weights: { combat: 40, chest: 20, trap: 20, elite: 20 } },
+  { minDepth: 16, maxDepth: 18, weights: { combat: 35, chest: 15, trap: 20, elite: 30 } },
+];
+
+export const TB_PARAMS = {
+  base: 12,
+  perDepth: 0.24,
+  starMultiplier: {
+    1: 0.85,
+    2: 1.0,
+    3: 1.1,
+    4: 1.25,
+    5: 1.4,
+  },
+  typeMultiplier: {
+    combat: 1.0,
+    chest: 0.85,
+    trap: 0.8,
+    elite: 1.0,
+  },
+};
 
 export const CHIP_DEFS = {
   start: {

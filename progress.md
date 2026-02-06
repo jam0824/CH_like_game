@@ -65,3 +65,40 @@ Original prompt: specフォルダの仕様書を確認し、動作が確認で�
   - single click for non-NOP remains selection-only
 - Playwright run on :5181 verified gameplay progression and no asset 404 in server log.
 - Manual/DOM automation checks verified triangle rotate/Shift reverse/Alt sync and placement rules (NOP single, non-NOP double).
+- Phase1 dungeon skeleton implemented for spec alignment:
+  - Added run/floor constants and tables in config (`MAX_DEPTH=20`, `BOSS_INTERVAL=5`, branch/star/type/TB params, intermission heal base).
+  - Replaced fixed `FLOOR_CONFIGS` with generator-based `generateFloor` + `generateBranchOptions` + `generateRewardOptions`.
+  - Implemented floor kinds: `normal`, `intermission`, `boss`; branch applies only on normal depths.
+  - Added run-state model fields in state (`run.seed/depth/buffs`, `floorKind/floorType/star`, `rewardOptions`, `hazards`, intermission payload).
+  - Switched main loop to mode transitions: `running -> reward -> (branch/fixed) -> next floor`.
+  - Added reward model (HP heal / attack+1 / speed+5%) and intermission UI flow (heal + next button).
+  - Added hazard telegraph pipeline (`state.hazards`) and hooked AI hazard sensors to both trap emitters and dynamic hazards.
+  - Extended enemy logic with boss-capable behavior and champion-style telegraph skills (sweep/stomp/dash) + cooldown rules.
+  - Extended render with hazard shapes (circle/cone/line) and boss scaling.
+  - Extended overlay UI with reward/intermission panels; branch cards include tags.
+- Validation results:
+  - Playwright short run (`240f`) still confirms active movement and no immediate stalls.
+  - Custom selector-driven Playwright script reached `depth=5`, `floorKind=boss`, `floorType=boss`; artifacts:
+    - `output/web-game/state-depth5.json`
+    - `output/web-game/shot-depth5.png`
+  - Existing `errors-0.json` from old runs can be stale; deleting and rerunning short Playwright did not recreate it.
+- Known tradeoffs for this phase:
+  - Depth 1-5 combat balance is intentionally forgiving so progression/UI flow can be validated consistently.
+  - Boss details beyond 5F are still template-level; 10/15/20 are not yet fully spec-patterned.
+- Follow-up adjustment:
+  - Removed temporary 25s auto-clear fallback from `main.js`.
+  - Normalized player base stats from debug values to playable defaults (`maxHp=220`, `baseAttackDamage=20`).
+  - Revalidated depth progression script; still reaches depth 5 boss (`output/web-game/state-depth5.json`).
+- Removed editor-only R range highlight overlay from AI grid selection (`src/ui.js`, `styles.css`), so selecting distance chips no longer paints inrange cells.
+- Improved inspector readability: selected placed chip now shows a prominent chip name header + short description in right palette, with supplemental kind/internal-id/position metadata. Updated AI editor spec accordingly.
+- Increased AI chip icon size in editor grid to ~1.5x (`30px -> 45px`) and synced mock (`mock/ai_editor_mock_wood_v11_2.html`) with the same chip size plus prominent inspector chip-name block.
+- Increased AI chip icon size to `64px` in both app and mock; enlarged grid cell size to `72px` to avoid clipping and keep icon readability.
+- Updated chip icon layout to top-left anchored and resized to `40px` (app + mock) per latest UI request; moved negate `!` badge to top-right to avoid overlap.
+- Conditional chips now render icon at `32px` (top-left) while non-conditional chips stay `40px`; shortened R labels from `R(ダンジョン)=N` to compact `RN` in palette/grid labels.
+- Fixed central-editor arrow click UX per spec 8.9.1: expanded triangle hitbox (`10x14` -> `18x18`) and kept rotate/Shift-reverse/Alt-sync behavior working reliably.
+- Inspector arrow panel UX updated: non-conditional chips now show a single arrow pad (no True/False labels), conditional chips still show True/False dual pads. Also removed on-grid disconnected-arrow warning marks (`⚠`) to reduce visual noise. Updated AI editor spec sections 8.7/8.9.2/8.9.3/8.10 accordingly.
+- TODO (next phase):
+  - Remove/retune auto-clear failsafe and temporary player stat boosts.
+  - Implement full spec-grade boss patterns for 10F/15F/20F and phase rules.
+  - Replace simplified enemy composition with full TB + role constraints (shield/caster/lancer gating) for depth >= 6.
+  - Add explicit UI affordance for intermission next-step in Playwright-friendly deterministic locations/tests.

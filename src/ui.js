@@ -76,6 +76,10 @@ function svgWrap(paths, size) {
 function createIconNode(type, size, className, assets) {
   const container = document.createElement('div');
   container.className = className;
+  if (className === 'ico-big') {
+    container.style.width = `${size}px`;
+    container.style.height = `${size}px`;
+  }
   const asset = assets?.chips?.[type];
   if (asset && asset.complete) {
     const img = document.createElement('img');
@@ -114,7 +118,7 @@ function cloneParams(def) {
 function getParamBadge(type, params) {
   if (type === 'hazard_on_self') return '—';
   if (['enemy_exists', 'treasure_exists', 'exit_exists', 'hazard_in_range'].includes(type)) {
-    return `R(ダンジョン)=${params.r ?? '?'}`;
+    return `R${params.r ?? '?'}`;
   }
   if (type === 'wait') {
     return `t=${formatNumber(params.t ?? 0.5)}s`;
@@ -131,7 +135,7 @@ function getChipSub(cell) {
   if (!cell) return '';
   const type = cell.type;
   if (['enemy_exists', 'treasure_exists', 'exit_exists', 'hazard_in_range'].includes(type)) {
-    return `R(ダンジョン)=${cell.params?.r ?? ''}`;
+    return `R${cell.params?.r ?? ''}`;
   }
   if (type === 'self_hp') {
     const op = cell.params?.op ?? '<';
@@ -166,8 +170,11 @@ function coordLabel(x, y) {
   return `${col}${y + 1}`;
 }
 
-function manhattan(a, b) {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+function getChipKindLabel(kind) {
+  if (kind === 'cond') return '条件';
+  if (kind === 'act') return '行動';
+  if (kind === 'basic') return '基本';
+  return 'その他';
 }
 
 function rotateDirection(currentDir, reverse = false) {
@@ -177,7 +184,18 @@ function rotateDirection(currentDir, reverse = false) {
   return DIR_ORDER[(idx + delta + DIR_ORDER.length) % DIR_ORDER.length];
 }
 
-export function createUI({ state, grid, assets, onStart, onPause, onReset, onChooseBranch, onToggleFullscreen }) {
+export function createUI({
+  state,
+  grid,
+  assets,
+  onStart,
+  onPause,
+  onReset,
+  onChooseBranch,
+  onChooseReward,
+  onContinueIntermission,
+  onToggleFullscreen,
+}) {
   const canvas = document.getElementById('game-canvas');
   const ctx = canvas.getContext('2d');
   const statusEl = document.getElementById('status');
@@ -193,6 +211,11 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
   const overlayEl = document.getElementById('overlay');
   const branchPanelEl = document.getElementById('branch-panel');
   const branchOptionsEl = document.getElementById('branch-options');
+  const rewardPanelEl = document.getElementById('reward-panel');
+  const rewardOptionsEl = document.getElementById('reward-options');
+  const intermissionPanelEl = document.getElementById('intermission-panel');
+  const intermissionInfoEl = document.getElementById('intermission-info');
+  const intermissionNextBtn = document.getElementById('intermission-next-btn');
   const gameoverPanelEl = document.getElementById('gameover-panel');
   const runPillEl = document.getElementById('run-pill');
   const stepPillEl = document.getElementById('step-pill');
@@ -208,6 +231,8 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
   const rtabButtons = Array.from(document.querySelectorAll('.rtab'));
   const rtabGroups = Array.from(document.querySelectorAll('.rgroup'));
   const inspectorChipEl = document.getElementById('inspector-chip');
+  const inspectorChipNameEl = document.getElementById('inspector-chip-name');
+  const inspectorChipDescEl = document.getElementById('inspector-chip-desc');
   const inspectorPosEl = document.getElementById('inspector-pos');
   const inspectorTagEl = document.getElementById('inspector-tag');
   const overviewReachableEl = document.getElementById('overview-reachable');
@@ -219,6 +244,10 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
   const deleteBtn = document.getElementById('btn-delete');
   const replaceBtn = document.getElementById('btn-replace');
   const duplicateBtn = document.getElementById('btn-duplicate');
+  const arrowTitleEl = document.getElementById('arrow-settings-title');
+  const arrowGroupTrueEl = document.getElementById('arrow-group-true');
+  const arrowGroupFalseEl = document.getElementById('arrow-group-false');
+  const arrowLabelTrueEl = document.getElementById('arrow-label-true');
   const arrowPads = Array.from(document.querySelectorAll('.arrowpad'));
   const bgmToggle = document.getElementById('bgm-toggle');
   const bgmVolume = document.getElementById('bgm-volume');
@@ -584,25 +613,64 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
     state.branchOptions.forEach((option) => {
       const btn = document.createElement('button');
       btn.className = 'branch-option';
-      btn.textContent = option.label;
+      const tag = option.rewardTag ? `\n${option.rewardTag}` : '';
+      btn.textContent = `${option.label}${tag}`;
       btn.addEventListener('click', () => onChooseBranch?.(option.id));
       branchOptionsEl.appendChild(btn);
     });
+  }
+
+  function renderRewardOptions() {
+    rewardOptionsEl.innerHTML = '';
+    state.rewardOptions.forEach((option) => {
+      const btn = document.createElement('button');
+      btn.className = 'reward-option';
+      btn.innerHTML = `<strong>${option.label}</strong><span>${option.desc}</span>`;
+      btn.addEventListener('click', () => onChooseReward?.(option.id));
+      rewardOptionsEl.appendChild(btn);
+    });
+  }
+
+  function renderIntermission() {
+    if (!intermissionInfoEl) return;
+    const healPct = Math.round((state.intermission.healRate || 0) * 100);
+    const healAmount = state.intermission.healAmount || 0;
+    intermissionInfoEl.textContent = `回復率: ${healPct}% / 回復量: ${healAmount} / ショップ: 準備中`;
   }
 
   function updateOverlay() {
     if (state.mode === 'branch') {
       overlayEl.classList.remove('hidden');
       branchPanelEl.classList.remove('hidden');
+      rewardPanelEl.classList.add('hidden');
+      intermissionPanelEl.classList.add('hidden');
       gameoverPanelEl.classList.add('hidden');
       renderBranchOptions();
+    } else if (state.mode === 'reward') {
+      overlayEl.classList.remove('hidden');
+      branchPanelEl.classList.add('hidden');
+      rewardPanelEl.classList.remove('hidden');
+      intermissionPanelEl.classList.add('hidden');
+      gameoverPanelEl.classList.add('hidden');
+      renderRewardOptions();
+    } else if (state.mode === 'intermission') {
+      overlayEl.classList.remove('hidden');
+      branchPanelEl.classList.add('hidden');
+      rewardPanelEl.classList.add('hidden');
+      intermissionPanelEl.classList.remove('hidden');
+      gameoverPanelEl.classList.add('hidden');
+      renderIntermission();
     } else if (state.mode === 'gameover') {
       overlayEl.classList.remove('hidden');
       branchPanelEl.classList.add('hidden');
+      rewardPanelEl.classList.add('hidden');
+      intermissionPanelEl.classList.add('hidden');
       gameoverPanelEl.classList.remove('hidden');
     } else {
       overlayEl.classList.add('hidden');
       branchPanelEl.classList.add('hidden');
+      rewardPanelEl.classList.add('hidden');
+      intermissionPanelEl.classList.add('hidden');
       gameoverPanelEl.classList.add('hidden');
     }
   }
@@ -628,7 +696,12 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
     const exitStatus = state.exit.active ? 'Exit: Active' : 'Exit: Hidden';
     const trapCount = state.traps.filter((trap) => trap.active).length;
     const chestCount = state.treasures.filter((treasure) => !treasure.opened).length;
-    hudEl.textContent = `Floor: ${state.floorDepth}/${state.totalDepth} ${state.floorName} | HP: ${state.player.hp} | Gold: ${state.player.gold} | Traps: ${trapCount} | Chests: ${chestCount} | ${enemyStatus} | ${exitStatus}`;
+    const hazardCount = state.hazards.length;
+    hudEl.textContent =
+      `Depth: ${state.floorDepth}/${state.totalDepth} ` +
+      `[${state.floorKind}/${state.floorType}${state.floorStar ? `★${state.floorStar}` : ''}] ` +
+      `HP: ${state.player.hp} | Gold: ${state.player.gold} | Traps: ${trapCount} | Hazards: ${hazardCount} | ` +
+      `Chests: ${chestCount} | ${enemyStatus} | ${exitStatus}`;
   }
 
   function getNextPos(x, y, dir) {
@@ -671,6 +744,21 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
   }
 
   function updateArrowPads(cell) {
+    const isConditional = Boolean(CHIP_DEFS[cell.type]?.conditional);
+    if (arrowTitleEl) {
+      arrowTitleEl.textContent = isConditional ? '矢印設定（True / False）' : '矢印設定';
+    }
+    if (arrowGroupTrueEl) {
+      arrowGroupTrueEl.classList.toggle('single', !isConditional);
+    }
+    if (arrowGroupFalseEl) {
+      arrowGroupFalseEl.classList.toggle('hidden', !isConditional);
+    }
+    if (arrowLabelTrueEl) {
+      arrowLabelTrueEl.textContent = isConditional ? 'True' : '矢印';
+      arrowLabelTrueEl.classList.toggle('red', isConditional);
+    }
+
     arrowPads.forEach((pad) => {
       const mode = pad.dataset.mode;
       const buttons = Array.from(pad.querySelectorAll('.k'));
@@ -681,7 +769,7 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
         if (mode === 'false' && cell.falseDir === btn.dataset.dir) btn.classList.add('on');
       });
       if (mode === 'false') {
-        const enabled = CHIP_DEFS[cell.type]?.conditional;
+        const enabled = isConditional;
         buttons.forEach((btn) => {
           if (!btn.dataset.dir) return;
           btn.disabled = !enabled;
@@ -805,9 +893,17 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
   function refreshInspector() {
     const cell = grid[selectedCell.y][selectedCell.x];
     const def = CHIP_DEFS[cell.type];
-    inspectorChipEl.textContent = def ? `条件：${def.label}` : '条件：-';
+    if (def) {
+      inspectorChipNameEl.textContent = def.label;
+      inspectorChipDescEl.textContent = def.desc || '説明はありません。';
+      inspectorChipEl.textContent = `種別：${getChipKindLabel(def.kind)} (${cell.type})`;
+    } else {
+      inspectorChipNameEl.textContent = 'EMPTY';
+      inspectorChipDescEl.textContent = '未配置セル（壁扱い）';
+      inspectorChipEl.textContent = '種別：未配置';
+    }
     inspectorPosEl.textContent = `座標：${coordLabel(selectedCell.x, selectedCell.y)}`;
-    inspectorTagEl.textContent = def?.tag || 'Instant';
+    inspectorTagEl.textContent = def?.tag || '-';
     negateBtn.textContent = cell.negate ? 'ON' : 'OFF';
     negateBtn.disabled = !def?.conditional;
     renderParams(cell);
@@ -831,20 +927,6 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
     const destTrue = getNextPos(selectedCell.x, selectedCell.y, grid[selectedCell.y][selectedCell.x]?.trueDir);
     const destFalse = getNextPos(selectedCell.x, selectedCell.y, grid[selectedCell.y][selectedCell.x]?.falseDir);
 
-    const rangeSet = new Set();
-    const selected = grid[selectedCell.y][selectedCell.x];
-    const selectedDef = CHIP_DEFS[selected?.type];
-    if (selectedDef?.params?.r) {
-      const r = selected.params?.r ?? selectedDef.params.r.default;
-      for (let y = 0; y < GRID_SIZE; y += 1) {
-        for (let x = 0; x < GRID_SIZE; x += 1) {
-          if (manhattan({ x, y }, selectedCell) <= r) {
-            rangeSet.add(`${x},${y}`);
-          }
-        }
-      }
-    }
-
     for (let y = 0; y < GRID_SIZE; y += 1) {
       for (let x = 0; x < GRID_SIZE; x += 1) {
         const cell = grid[y][x];
@@ -865,10 +947,6 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
         if (destFalse && destFalse.x === x && destFalse.y === y) {
           cellEl.classList.add('dest-false');
         }
-        if (rangeSet.has(`${x},${y}`)) {
-          cellEl.classList.add('inrange');
-        }
-
         cellEl.innerHTML = '';
 
         if (!cell || cell.type === 'empty') continue;
@@ -878,7 +956,8 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
         chip.className = 'chip';
         if (cell.type === 'start') chip.classList.add('startchip');
 
-        const icon = createIconNode(cell.type, 30, 'ico-big', assets);
+        const iconSize = def?.conditional ? 32 : 40;
+        const icon = createIconNode(cell.type, iconSize, 'ico-big', assets);
         chip.appendChild(icon);
 
         const sub = getChipSub(cell);
@@ -914,14 +993,6 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
           tri.dataset.mode = 'true';
           tri.dataset.dir = trueDir;
           cellEl.appendChild(tri);
-
-          if (cell.trueDir && !getNextPos(x, y, cell.trueDir)) {
-            warnings.push(`${coordLabel(x, y)} Trueが壁`);
-            const warn = document.createElement('div');
-            warn.className = `warn ${cell.trueDir[0]}`;
-            warn.textContent = '⚠';
-            cellEl.appendChild(warn);
-          }
         }
 
         if (showFalse) {
@@ -931,14 +1002,6 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
           tri.dataset.mode = 'false';
           tri.dataset.dir = falseDir;
           cellEl.appendChild(tri);
-
-          if (cell.falseDir && !getNextPos(x, y, cell.falseDir)) {
-            warnings.push(`${coordLabel(x, y)} Falseが壁`);
-            const warn = document.createElement('div');
-            warn.className = `warn ${cell.falseDir[0]}`;
-            warn.textContent = '⚠';
-            cellEl.appendChild(warn);
-          }
         }
       }
     }
@@ -1070,6 +1133,9 @@ export function createUI({ state, grid, assets, onStart, onPause, onReset, onCho
     resetBtn.addEventListener('click', () => {
       onReset?.();
       switchTab('editor');
+    });
+    intermissionNextBtn?.addEventListener('click', () => {
+      onContinueIntermission?.();
     });
 
     window.addEventListener('keydown', (event) => {
